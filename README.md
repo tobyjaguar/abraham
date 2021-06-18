@@ -1,7 +1,23 @@
-# Abraham MVP
+## Abraham MVP
 
-Minimum viable product for [Abraham](http://abraham.ai), an [autonomous artificial artist](https://medium.com/@genekogan/8384824a75c7).
+Server task queue based on https://github.com/miguelgrinberg/flask-celery-example
 
-This codebase implements an artificial artist who satisfies the requirements of autonomy, uniqueness, and originality. 
+Installation:
 
-Alpha version will be code-named Genesis. There is currently no [agreed-to architecture](http://abraham.ai/covenant) for Abraham. A study and design process is underway. Meanwhile, a playground for testing generative art procedures to be integrated into the mvp can be found in [Eden](https://github.com/abraham-ai/eden).
+    sudo apt get install redis-server
+    pip install -r requirements.txt
+
+[Install nginx and gunicorn](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-18-04), set up a systemd service to execute the start-up command `gunicorn --workers 1 --bind unix:abraham.sock -m 007 wsgi:app`, and run:
+
+    sudo systemctl start abraham
+
+Also, to launch workers, run:
+
+    redis-server
+    celery -A server.celery worker  -P solo -l info --logfile=log_celery.txt 
+
+To stop celery workers:
+    
+    ps auxww | grep 'server.celery worker' | awk '{print $2}' | xargs kill -9
+    
+

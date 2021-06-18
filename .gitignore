@@ -1,0 +1,6 @@
+.htpasswd
+.ipynb_checkpoints/
+__pycache__/
+*.log
+taming
+static/results

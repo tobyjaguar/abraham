@@ -1,0 +1,6 @@
+wheel
+gunicorn
+flask
+celery
+python-dotenv
+ml4a

@@ -1,0 +1,219 @@
+<html>
+  <head>
+    <title>Creations</title>
+    <link rel="stylesheet" type="text/css" href="css/loading-bar.css"/>
+
+    <style>
+        html {
+            font-family: "Trebuchet MS", Helvetica, sans-serif;
+            font-size: 25px;
+            letter-spacing: 0px;
+            word-spacing: 0px;
+            color: #000000;
+            font-weight: normal;
+            text-decoration: none;
+            font-style: normal;
+            font-variant: normal;
+            text-transform: none;
+        }
+        body {
+            padding: 20px;
+        }
+        #results {
+            margin-top: 10px;
+        }
+        .creation {
+            display: inline-block;
+            margin: 15px;
+            padding: 5px;
+            border: 1px solid #bbb;
+        }
+        .cr_img {
+            
+        }
+        
+        .cr_text{
+            padding: 5px;
+            padding-bottom: 10px;
+        }
+        
+        #text_input, #start-bg-job{
+            font-size : 24px; 
+            margin: auto;
+        }
+        #text_input {
+            width: 60%;
+            margin: 10px;
+        }        
+        #start-bg-job {
+            width: 30%;
+            margin: 10px;
+        }   
+        
+        #status {
+            display: inline-block;
+            width: 20%;
+            padding: 2px;
+            font-size: 0.9em;
+            margin: auto;
+        }
+    </style>
+      
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" src="js/loading-bar.js"></script>
+
+  </head>
+  <body>
+    
+    Give a text input to Abraham. Or read the <a href="/scripture">Scripture</a>
+    <br/>
+    <input id="text_input" width=500></input>
+    <br/>
+    <button id="start-bg-job">Create</button>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+      
+    <script>
+        
+        var prev_state;
+        var bar1 = -1;
+
+        function refreshCachedImage(img_id, img_path) {
+            var img = document.getElementById(img_id);
+            img.src = img_path;
+        };
+        
+        function start_text2image() {
+            var text_input = $('#text_input')[0].value;
+            $.ajax({
+                type: 'POST',
+                url: '/start_creation',
+                data: { 
+                    'text_input': text_input
+                },                
+                success: function(data, status, request) {
+                    status_url = request.getResponseHeader('Location');
+                    update_progress(status_url);
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+        
+        function get_num_jobs() {
+            $.ajax({
+                type: 'GET',
+                url: '/getjobs',
+                success: function(data, status, request) {
+                    var num_scheduled = data['scheduled'];
+                    var num_active = data['active'];
+                    var num_reserved = data['reserved'];
+                    var ntx = num_scheduled + num_active + num_reserved;
+                    var tx = ntx;
+                    var $div = $("<div>", {"class": "job"});
+                    $div.html(tx);
+                    $("#jobs").append($div);
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+
+        function refresh_creations() {
+            $.ajax({
+                type: 'GET',
+                url: '/getimages',
+                success: function(data, status, request) {
+                    $('#results').empty();
+                    for (var i=0; i<data.length; i++) {
+                        var img_path = data[i]['image'];
+                        var text_input = data[i]['text_input'];                        
+                        var $div = $("<div>", {"class": "creation"});
+                        var $div1 = $("<div>", {"class": "cr_text"});
+                        var $div2 = $("<div>", {"class": "cr_img"});
+                        $div1.html(text_input);
+                        $div2.html('<img src="'+img_path+'" />');
+                        $div.append($div1);
+                        $div.append($div2);
+                        $div.click(function(){ console.log(text_input) });
+                        $("#results").append($div);
+                    }
+                },
+                error: function() {
+                    alert('Unexpected error');
+                }
+            });
+        }
+        
+        function update_progress(status_url) {
+            $.getJSON(status_url, function(data) {
+                var state = data['state'];
+                var percent = parseInt(data['current'] * 100 / data['total']);
+                
+                if (state=='PENDING' && state != prev_state) {
+                    $("#status").empty();
+                    $("#status").html('<div class="pending">Pending in queue</div>');
+                } 
+                else if (state=='FAILURE' && state != prev_state) {
+                    $("#status").empty();
+                    $("#status").html('<div class="failed">Failed</div>');
+                } 
+                else if (state=='PROGRESS') {
+                    if (state != prev_state) {
+                        $("#status").empty();
+                        bar1 = new ldBar("#status", {
+                            "class": "label-center",
+                            "text-align": "center",
+                            "stroke": '#00f',
+                            "stroke-width": 10,
+                            "preset": "stripe",
+                            "value": percent
+                        });
+                    }
+                    bar1.set(percent);
+                }                
+                
+                if (state != 'PENDING' && state != 'PROGRESS') {
+                    $("#status").empty();
+                    if ('result' in data) {
+                        $("#status").empty();
+                        $("#status").html('<div class="finished">Finished!</div>');
+                        refresh_creations();
+                        setTimeout(function() {
+                            $("#status").empty();
+                        }, 5000);
+                    }
+                    else {
+                        $(status_div.childNodes[3]).text('Result: ' + data['state']);
+                    }
+                }
+                else {
+                    // rerun in 2 seconds
+                    setTimeout(function() {
+                        update_progress(status_url);
+                    }, 2000);
+                }
+                prev_state = state;
+
+            });
+        }
+        
+        $(function() {
+            $('#start-bg-job').click(start_text2image);
+        });
+        $(function() {
+            $('#getimgs').click(refresh_creations);
+        });
+        $(function() {
+            $('#getjobs').click(get_num_jobs);
+        });
+        
+        refresh_creations();
+
+    </script>
+    
+  </body>
+</html>
