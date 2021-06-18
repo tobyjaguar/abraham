@@ -1,4 +1,13 @@
-## Abraham MVP
+# Abraham
+
+
+> And in the hearts of all who are skillful I have put skill.
+> 
+> Exodus 31:6
+
+Abraham is a project to create an [autonomous artificial artist](https://abraham.ai/).
+
+# Application
 
 Server task queue based on https://github.com/miguelgrinberg/flask-celery-example
 
