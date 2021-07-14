@@ -27,6 +27,7 @@
             display: inline-block;
             margin: 15px;
             padding: 5px;
+            width: 542px;
             border: 1px solid #bbb;
         }
         .cr_img {
@@ -69,7 +70,7 @@
   </head>
   <body>
     
-    Give a text input to Abraham. Or read the <a href="/scripture">Scripture</a>
+      Give a text input to <a href="/">Abraham</a>. Or read the <a href="/scripture">Scripture</a>
     <br/>
         
     <input id="text_input" type="text">
@@ -87,7 +88,7 @@
         function refresh_creations() {
             $.ajax({
                 type: 'GET',
-                url: '/get_images',
+                url: '/get_creations',
                 success: function(data, status, request) {
                     $('#results').empty();
                     for (var i=0; i<data.length; i++) {
@@ -105,7 +106,7 @@
                     }
                 },
                 error: function() {
-                    alert('Unexpected error');
+                    alert('Unexpected error, please tell Gene :)');
                 }
             });
         }
@@ -113,7 +114,7 @@
         function request_creation() {
             var text_input = $('#text_input').val()
             if (!/\S/.test(text_input)) {
-                alert("nothing found")
+                alert("No text input given!")
                 return;
             }
             $.ajax({
@@ -132,7 +133,7 @@
                     
                 },
                 error: function() {
-                    alert('Unexpected error');
+                    alert('Unexpected error, please tell Gene :)');
                 }
             });
         }
@@ -151,11 +152,11 @@
                 success: function(data, status, request) {
                     status = request.getResponseHeader('status');
                     console.log('status is', status)
-                    if (status == 'completed') {
+                    if (status == 'complete') {
                         $('#status').html('');
                         refresh_creations();
                     } else {
-                        var status_str = 'Task '+task_id+' is running.';
+                        var status_str = 'Task '+task_id+' is running. It should take ~5 minutes. If it fails, tell Gene.';
                         $('#status').html(status_str);
                         setTimeout(function() {
                             check_status();
@@ -163,7 +164,7 @@
                     }
                 },
                 error: function() {
-                    alert('Unexpected error');
+                    alert('Unexpected error, please tell Gene :)');
                 }
             });
         }

@@ -2,6 +2,7 @@ import os
 import time
 import json
 import glob
+import PIL
 import random
 import pathlib
 import logging
@@ -12,12 +13,12 @@ import generator
 from eden.client import Client
 from eden.datatypes import Image
 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'top-secret!'
-app.secret_key = 'your_secret_key_here'
 
 # setup logging
-logging.basicConfig(filename='abraham2.log', 
+logging.basicConfig(filename='abraham4.log', 
                     filemode='a', 
                     level=logging.DEBUG,
                     datefmt='%H:%M:%S',
@@ -25,11 +26,11 @@ logging.basicConfig(filename='abraham2.log',
 
 # text-to-image client
 client = Client(url = 'http://127.0.0.1:5656', username='abraham', timeout= 990000)
-setup_response = client.setup()
+#setup_response = client.setup()
 
 
-@app.route('/get_images', methods=['GET'])
-def get_images():
+@app.route('/get_creations', methods=['GET'])
+def get_creations():
     creations = []
     results = glob.glob('static/results/*')
     for result in results:
@@ -39,15 +40,7 @@ def get_images():
             continue
         with open(config_path) as f:
             config = json.load(f)
-            
-        # quick hack because of backdated images with different config schema
-        if 'text_inputs' in config:
-            text_input = config['text_inputs'][0]['text']
-        elif 'prompt' in config:
-            text_input = config['prompt']
-        else:
-            text_input = '___UNDEFINED!!!___'
-            
+        text_input = config['text_inputs'][0]['text']
         creation = {
             'image': image_path, 
             'text_input': text_input, 
@@ -63,55 +56,54 @@ def request_creation():
     text_input = request.form['text_input']
     
     config = {
-        'prompt': text_input,
+        'text_inputs': [{
+            'text': text_input,
+            'weight': 10.0
+        }],
         'width': 512,
         'height': 512,
-        'iters': 1100,
+        'num_octaves': 3,
+        'octave_scale': 2.0,
+        'num_iterations': [100, 200, 300],
         'weight_decay': 0.1,
         'learning_rate': 0.1,
         'lr_decay_after': 400,
         'lr_decay_rate': 0.995
     }
+    
     response = client.run(config)
-
-    print(response)
-    #pil_image = run_response['output']['creation']
-    #pil_image.save('_hi_saved_from_server.png')
     logging.info(response)
-
     task_id = response['token']
-
     result = {'task_id': task_id}
     
     return jsonify({}), 202, result
 
+
 @app.route('/get_status', methods=['POST'])
 def get_status():
-    job_id = request.form['task_id']
-    status = 'done'
+    print('get status from eden')
+    logging.info('get status from eden')
     
+    job_id = request.form['task_id']
     results = client.fetch(token=job_id)
+    status = results['status']
     print(results)
     logging.info(results)
-    status = results['status']
-    
+    if status == 'complete':
+        #img = results['output']['creation']
+        #config = results['output']['config']
+        #save_creation(img, config)
+        pass
     result = {'status': status}
     return jsonify({}), 202, result
+
 
 @app.route('/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
 
-# @app.route('/create')
-# def create():
-#     return render_template('create.html')
-@app.route('/create', methods=['GET', 'POST'])
+@app.route('/create')
 def create():
-    if request.method == 'GET':
-        return render_template('create.html')
-
-@app.route('/test')
-def test2():
     return render_template('create.html')
 
 @app.route('/scripture')
