@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'top-secret!'
 
 # setup logging
-logging.basicConfig(filename='abraham4.log', 
+logging.basicConfig(filename='../abraham.log', 
                     filemode='a', 
                     level=logging.DEBUG,
                     datefmt='%H:%M:%S',
