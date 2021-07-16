@@ -6,7 +6,9 @@ import PIL
 import random
 import pathlib
 import logging
+from dotenv import load_dotenv
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, request, render_template, send_from_directory
 from flask import session, flash, redirect, url_for, jsonify
 import generator
@@ -17,6 +19,9 @@ from eden.datatypes import Image
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'top-secret!'
 
+# threading for checking on save
+executor = ThreadPoolExecutor(4)
+
 # setup logging
 logging.basicConfig(filename='../abraham.log', 
                     filemode='a', 
@@ -25,8 +30,7 @@ logging.basicConfig(filename='../abraham.log',
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
 
 # text-to-image client
-client = Client(url = 'http://127.0.0.1:5656', username='abraham', timeout= 990000)
-#setup_response = client.setup()
+client = Client(url = 'http://127.0.0.1:5454', username='abraham', timeout= 990000)
 
 
 @app.route('/get_creations', methods=['GET'])
@@ -51,11 +55,42 @@ def get_creations():
     return jsonify(creations)
     
 
+def check_on_task(task_id):
+    response = client.await_results(task_id)
+
+    if 'output' not in response:
+        return
+    
+    img = response['output']['creation']
+    config = response['output']['config']
+
+    load_dotenv()
+    RESULTS_DIR = os.environ['RESULTS_DIR']  
+    
+    try:
+        last_idx = int(sorted(glob.glob(f'{RESULTS_DIR}/*'))[-1].split('/')[-1])
+    except:
+        last_idx = 0
+    idx = 1 + last_idx
+    output_dir = f'{RESULTS_DIR}/%04d'%idx
+    image_path = '{}/{}'.format(output_dir, 'image.jpg')
+    config_path = '{}/{}'.format(output_dir, 'config.json')        
+
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+
+    img.save(image_path)
+
+    with open(config_path, 'w') as outfile:
+       json.dump(config, outfile)
+    
+
 @app.route('/request_creation', methods=['POST'])
 def request_creation():
     text_input = request.form['text_input']
     
     config = {
+        'model_name': random.choice(['imagenet', 'wikiart']),
         'text_inputs': [{
             'text': text_input,
             'weight': 10.0
@@ -72,30 +107,19 @@ def request_creation():
     }
     
     response = client.run(config)
-    logging.info(response)
     task_id = response['token']
     result = {'task_id': task_id}
+
+    executor.submit(check_on_task, task_id)
     
     return jsonify({}), 202, result
 
 
 @app.route('/get_status', methods=['POST'])
 def get_status():
-    print('get status from eden')
-    logging.info('get status from eden')
-    
     job_id = request.form['task_id']
     results = client.fetch(token=job_id)
-    status = results['status']
-    print(results)
-    logging.info(results)
-    if status == 'complete':
-        #img = results['output']['creation']
-        #config = results['output']['config']
-        #save_creation(img, config)
-        pass
-    result = {'status': status}
-    return jsonify({}), 202, result
+    return jsonify({}), 202, results
 
 
 @app.route('/<path:path>')

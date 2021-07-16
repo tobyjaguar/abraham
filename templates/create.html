@@ -84,6 +84,7 @@
     <script>
               
         let task_id = null;
+        let last_submitted_text = '';
         
         function refresh_creations() {
             $.ajax({
@@ -125,12 +126,13 @@
                 }, 
                 success: function(data, status, request) {
                     task_id = request.getResponseHeader('task_id');
-                    console.log(task_id)
-                    
+                    last_submitted_text = text_input;
+                    var status_str = 'Submitted "'+last_submitted_text+'" (ID: '+task_id+')';
+                    $('#status').html(status_str);
+                    $('#text_input').val('')
                     setTimeout(function() {
                         check_status();
-                    }, 500);
-                    
+                    }, 2500);                    
                 },
                 error: function() {
                     alert('Unexpected error, please tell Gene :)');
@@ -151,16 +153,34 @@
                 }, 
                 success: function(data, status, request) {
                     status = request.getResponseHeader('status');
-                    console.log('status is', status)
                     if (status == 'complete') {
-                        $('#status').html('');
-                        refresh_creations();
-                    } else {
-                        var status_str = 'Task '+task_id+' is running. It should take ~5 minutes. If it fails, tell Gene.';
+                        setTimeout(function() {
+                            $('#status').html('');
+                            refresh_creations();
+                        }, 2000);
+                    } 
+                    else if (status == 'failed') {
+                        output = request.getResponseHeader('output');
+                        status_str = '<span style="color:red">"'+last_submitted_text+'" failed: '+output+'</span>';
+                        status_str += '<br/><span style="color:red">ID: '+task_id+'</span>'
+                        $('#status').html(status_str);
+                    }
+                    else {
+                        progress = request.getResponseHeader('progress');
+                        var status_str = '';
+                        if (progress === 'None') {
+                            status_str = '"'+last_submitted_text+'" is pending';
+                            status_str += '<br/><span style="color:gray">ID: '+task_id+'</span>'
+                        }
+                        else {
+                            pct = Math.ceil(100*progress);
+                            status_str = '"'+last_submitted_text+'" in progress: '+pct.toString()+'%';
+                            status_str += '<br/><span style="color:gray">ID: '+task_id+'</span>'
+                        }
                         $('#status').html(status_str);
                         setTimeout(function() {
                             check_status();
-                        }, 5000);
+                        }, 4000);
                     }
                 },
                 error: function() {
