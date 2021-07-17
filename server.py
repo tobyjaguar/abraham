@@ -11,7 +11,6 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, request, render_template, send_from_directory
 from flask import session, flash, redirect, url_for, jsonify
-import generator
 from eden.client import Client
 from eden.datatypes import Image
 
@@ -90,7 +89,7 @@ def request_creation():
     text_input = request.form['text_input']
     
     config = {
-        'model_name': random.choice(['imagenet', 'wikiart']),
+        'model_name': 'imagenet', #random.choice(['imagenet', 'wikiart']),
         'text_inputs': [{
             'text': text_input,
             'weight': 10.0
@@ -99,7 +98,7 @@ def request_creation():
         'height': 512,
         'num_octaves': 3,
         'octave_scale': 2.0,
-        'num_iterations': [100, 200, 300],
+        'num_iterations': [200, 250, 300],
         'weight_decay': 0.1,
         'learning_rate': 0.1,
         'lr_decay_after': 400,
@@ -119,6 +118,15 @@ def request_creation():
 def get_status():
     job_id = request.form['task_id']
     results = client.fetch(token=job_id)
+    if results['status'] == 'queued':
+        # to-do: provide estimate of wait time
+        status_of_running_tasks = results['status_of_running_tasks']
+        queue_position = results['queue_position']
+        sec_per_job = 200/4.962 + 250/3.826 + 300/1.964
+        num_gpus = len(status_of_running_tasks)
+        sec_remaining_per_job = [(1.0-s) * sec_per_job for s in status_of_running_tasks]
+        results['estimated_wait_time'] = 0  # todo
+
     return jsonify({}), 202, results
 
 

@@ -102,7 +102,7 @@
                         $div2.html('<img src="'+img_path+'" />');
                         $div.append($div1);
                         $div.append($div2);
-                        $div.click(function(){ console.log(text_input) });
+                        //$div.click(function(){ console.log(text_input) });
                         $("#results").append($div);
                     }
                 },
@@ -165,6 +165,15 @@
                         status_str += '<br/><span style="color:red">ID: '+task_id+'</span>'
                         $('#status').html(status_str);
                     }
+                    else if (status == 'queued') {
+                        queue_position = parseInt(request.getResponseHeader('queue_position'));
+                        status_str = '"'+last_submitted_text+'" is #'+queue_position.toString()+' in queue';
+                        status_str += '<br/><span style="color:gray">ID: '+task_id+'</span>';
+                        $('#status').html(status_str);
+                        setTimeout(function() {
+                            check_status();
+                        }, 5000);
+                    }
                     else {
                         progress = request.getResponseHeader('progress');
                         var status_str = '';
@@ -180,7 +189,7 @@
                         $('#status').html(status_str);
                         setTimeout(function() {
                             check_status();
-                        }, 4000);
+                        }, 2000);
                     }
                 },
                 error: function() {
