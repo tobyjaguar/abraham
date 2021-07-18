@@ -120,12 +120,13 @@ def get_status():
     results = client.fetch(token=job_id)
     if results['status'] == 'queued':
         # to-do: provide estimate of wait time
-        status_of_running_tasks = results['status_of_running_tasks']
-        queue_position = results['queue_position']
-        sec_per_job = 200/4.962 + 250/3.826 + 300/1.964
-        num_gpus = len(status_of_running_tasks)
-        sec_remaining_per_job = [(1.0-s) * sec_per_job for s in status_of_running_tasks]
-        results['estimated_wait_time'] = 0  # todo
+        #status_of_running_tasks = results['status_of_running_tasks']
+        #queue_position = results['queue_position']
+        #sec_per_job = 200/4.962 + 250/3.826 + 300/1.964
+        #num_gpus = len(status_of_running_tasks)
+        #sec_remaining_per_job = [(1.0-s) * sec_per_job for s in status_of_running_tasks]
+        #results['estimated_wait_time'] = 0  # todo
+        pass
 
     return jsonify({}), 202, results
 
