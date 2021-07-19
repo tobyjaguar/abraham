@@ -55,6 +55,8 @@ def get_creations():
     
 
 def check_on_task(task_id):
+    time.sleep(5)
+    
     response = client.await_results(task_id)
 
     if 'output' not in response:
@@ -98,7 +100,7 @@ def request_creation():
         'height': 512,
         'num_octaves': 3,
         'octave_scale': 2.0,
-        'num_iterations': [200, 250, 300],
+        'num_iterations': [200, 300, 400],
         'weight_decay': 0.1,
         'learning_rate': 0.1,
         'lr_decay_after': 400,
@@ -116,8 +118,14 @@ def request_creation():
 
 @app.route('/get_status', methods=['POST'])
 def get_status():
-    job_id = request.form['task_id']
-    results = client.fetch(token=job_id)
+    task_id = request.form['task_id']
+    
+    try:
+        results = client.fetch(token=task_id)
+    except:
+        logging.info('Error on client.fetch(token="{}")'.format(task_id))
+        results = {'status': 'fetch_error'}
+
     if results['status'] == 'queued':
         # to-do: provide estimate of wait time
         #status_of_running_tasks = results['status_of_running_tasks']

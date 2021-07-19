@@ -159,6 +159,13 @@
                             refresh_creations();
                         }, 2000);
                     } 
+                    else if (status == 'fetch_error') {
+                        console.log("server side error on fetch");
+                        setTimeout(function() {
+                            $('#status').html('');
+                            refresh_creations();
+                        }, 5000);
+                    }
                     else if (status == 'failed') {
                         output = request.getResponseHeader('output');
                         status_str = '<span style="color:red">"'+last_submitted_text+'" failed: '+output+'</span>';
