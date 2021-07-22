@@ -1,7 +1,7 @@
 <html>
   <head>
     <title>Creations</title>
-    <link rel="stylesheet" type="text/css" href="css/loading-bar.css"/>
+    <!-- <link rel="stylesheet" type="text/css" href="css/loading-bar.css"/> -->
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 
     <style>
@@ -64,44 +64,159 @@
             padding: 2px;
             font-size: 0.9em;
             margin: auto;
+            vertical-align: middle;
         }
+
+        #sortDate, #sortPraise, #sortBurn {
+            padding: 5px;
+        }
+        #sortDate:hover, #sortPraise:hover, .praise:hover, #sortBurn:hover, .burn:hover {
+            cursor: pointer;
+        }
+
+        .praise:hover, .burn:hover {
+            background-color: green;
+            color: white;
+        }
+
+        .cr_status {
+            font-size: 1.5em;
+            padding: 3px;
+        }
+
     </style>
 
   </head>
   <body>
     
-      Give a text input to <a href="/">Abraham</a>. Or read the <a href="/scripture">Scripture</a>
+    Give a text input to <a href="/">Abraham</a>. Or read the <a href="/scripture">Scripture</a>
     <br/>
         
     <input id="text_input" type="text">
     <br/>
     <button id="bCreate">Create</button>
-<!--     <button id="bStatus">Check Status</button> -->
         
     <div id="status"></div>
+
+    <br/>&nbsp;
+    <br/>
+    Sort by: 
+    <span id="sortDate">Newest</span>&nbsp;&nbsp;&nbsp;
+    <span id="sortPraise">Most praised</span>&nbsp;&nbsp;&nbsp;
+    <span id="sortBurn">Most burned</span>
+    <br/>
+
     <div id="results"></div>
+
       
     <script>
               
         let task_id = null;
         let last_submitted_text = '';
+        let sort_by = 'date';
+        let action_disabled = [];
+
+        function modify_stats(index, div, action) {
+            if (action_disabled.indexOf(index) > -1) {
+                alert("Hey hey hey now... you can't praise or burn this again");
+                return;
+            }
+            $.ajax({
+                type: 'POST',
+                url: '/'+action,
+                data: { 
+                    'index': index,
+                }, 
+                success: function(data, status, request) {
+                    updated_number = request.getResponseHeader(action);
+                    emoji = ((action=='praise') ? '🙌' : '🔥');
+                    $(div).html('<span class="'+action+'">'+emoji+' '+updated_number+'</a>');
+                    action_disabled.push(index);
+                },
+                error: function() {
+                    alert('Unexpected error, please tell Gene :)');
+                }
+            });
+            
+        }
+
+        function praise(event) {
+            modify_stats(event.data.index, event.data.div, 'praise')
+        }
+
+        function burn(event) {
+            modify_stats(event.data.index, event.data.div, 'burn')
+        }
+
+        function highlight(class_str) {
+            $(class_str).css({"background-color": "black", "color": "white"})
+        }
+
+        function unhighlight(class_str) {
+            $(class_str).css({"background-color": "white", "color": "black"})
+        }
+
+        function sort_by_praise() {
+            sort_by = 'praise';
+            highlight('#sortPraise');
+            unhighlight('#sortBurn');
+            unhighlight('#sortDate');
+            refresh_creations();
+        }
+
+        function sort_by_burn() {
+            sort_by = 'burn';
+            unhighlight('#sortPraise');
+            highlight('#sortBurn');
+            unhighlight('#sortDate');
+            refresh_creations();
+        }
+
+        function sort_by_date() {
+            sort_by = 'newest';
+            unhighlight('#sortPraise');
+            unhighlight('#sortBurn');
+            highlight('#sortDate');
+            refresh_creations();
+        }
         
         function refresh_creations() {
             $.ajax({
-                type: 'GET',
+                type: 'POST',
                 url: '/get_creations',
+                data: { 
+                    'sort_by': sort_by
+                }, 
                 success: function(data, status, request) {
                     $('#results').empty();
                     for (var i=0; i<data.length; i++) {
+                        var idx = data[i]['index'];
                         var img_path = data[i]['image'];
                         var text_input = data[i]['text_input'];                        
+                        var praises = data[i]['praise'];                        
+                        var burns = data[i]['burn'];
                         var $div = $("<div>", {"class": "creation"});
                         var $div1 = $("<div>", {"class": "cr_text"});
                         var $div2 = $("<div>", {"class": "cr_img"});
+                        var $div3 = $("<div>", {"class": "cr_status"});
+                        var $div4 = $("<span>", {"class": "cr_praise"});
+                        var $div5 = $("<span>", {"class": "cr_burn"});
                         $div1.html(text_input);
                         $div2.html('<img src="'+img_path+'" />');
+                        $div3.html('');
+
+                        $div4.html('<span class="praise">🙌 '+praises+'</a>');
+                        $div5.html('<span class="burn">🔥 '+burns+'</a>');
+                        $div4.click({index: idx, div: $div4}, praise)
+                        $div5.click({index: idx, div: $div5}, burn)
+
+                        $div3.append($div4);
+                        $div3.append('&nbsp;&nbsp;&nbsp;&nbsp;')
+                        $div3.append($div5);
+
                         $div.append($div1);
                         $div.append($div2);
+                        $div.append($div3);
                         //$div.click(function(){ console.log(text_input) });
                         $("#results").append($div);
                     }
@@ -118,21 +233,29 @@
                 alert("No text input given!")
                 return;
             }
+            var token = prompt("Please enter a token", "");
             $.ajax({
                 type: 'POST',
                 url: '/request_creation',
                 data: { 
-                    'text_input': text_input
+                    'text_input': text_input,
+                    'token': token
                 }, 
                 success: function(data, status, request) {
-                    task_id = request.getResponseHeader('task_id');
-                    last_submitted_text = text_input;
-                    var status_str = 'Submitted "'+last_submitted_text+'" (ID: '+task_id+')';
-                    $('#status').html(status_str);
-                    $('#text_input').val('')
-                    setTimeout(function() {
-                        check_status();
-                    }, 2500);                    
+                    result = request.getResponseHeader('result');
+                    if (result == 'success') {
+                        task_id = request.getResponseHeader('task_id');
+                        last_submitted_text = text_input;
+                        var status_str = 'Submitted "'+last_submitted_text+'" (ID: '+task_id+')';
+                        $('#status').html(status_str);
+                        $('#text_input').val('')
+                        setTimeout(function() {
+                            check_status();
+                        }, 2500);
+                    } 
+                    else if (result == 'fail') {
+                        alert('Token not recognized! To get tokens, please join the Discord and ask Gene :)');
+                    }
                 },
                 error: function() {
                     alert('Unexpected error, please tell Gene :)');
@@ -208,7 +331,12 @@
         $(function() {
             $('#bCreate').click(request_creation);
             $('#bStatus').click(check_status);
-            refresh_creations();
+
+            $('#sortDate').click(sort_by_date);
+            $('#sortPraise').click(sort_by_praise);
+            $('#sortBurn').click(sort_by_burn);
+
+            sort_by_date();
         });
 
     </script>
