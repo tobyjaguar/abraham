@@ -27,11 +27,14 @@ app.config['SECRET_KEY'] = 'top-secret!'
 executor = ThreadPoolExecutor(4)
 
 # setup logging
-logging.basicConfig(filename='../abraham.log', 
-                    filemode='a', 
-                    level=logging.DEBUG,
-                    datefmt='%H:%M:%S',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
+logging.basicConfig(
+    filename='../abraham.log', 
+    filemode='a', 
+    level=logging.DEBUG,
+    datefmt='%H:%M:%S',
+    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("urllib3").propagate = False
 
 # text-to-image client
 client = Client(url = 'http://127.0.0.1:{}'.format(CLIENT_PORT), username='abraham', timeout= 990000)
@@ -119,6 +122,7 @@ def check_on_task(task_id, token):
     with open(stats_path, 'w') as outfile:
        json.dump(stats, outfile)
     tokens.spend_token(token, idx)
+    logging.info('Task {} finished. Saved to {}'.format(task_id, output_dir))
 
 
 @app.route('/request_creation', methods=['POST'])
@@ -147,6 +151,7 @@ def request_creation():
         task_id = response['token']
         result = {'result': 'success', 'task_id': task_id}
         executor.submit(check_on_task, task_id, token)
+        logging.info('Task {} submitted: text input {}'.format(task_id, text_input))
     else:
         result = {'result': token_status}
     return jsonify({}), 202, result
