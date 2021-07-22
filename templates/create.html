@@ -253,7 +253,10 @@
                             check_status();
                         }, 2500);
                     } 
-                    else if (result == 'fail') {
+                    else if (result == 'spent') {
+                        alert('This token has already been used!');
+                    }
+                    else if (result == 'none') {
                         alert('Token not recognized! To get tokens, please join the Discord and ask Gene :)');
                     }
                 },

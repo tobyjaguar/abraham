@@ -14,6 +14,11 @@ from flask import session, flash, redirect, url_for, jsonify
 from eden.client import Client
 from eden.datatypes import Image
 
+import tokens
+
+load_dotenv()
+RESULTS_DIR = os.environ['RESULTS_DIR']      
+CLIENT_PORT = os.environ['CLIENT_PORT']
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'top-secret!'
@@ -29,7 +34,7 @@ logging.basicConfig(filename='../abraham.log',
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
 
 # text-to-image client
-client = Client(url = 'http://127.0.0.1:5656', username='abraham', timeout= 990000)
+client = Client(url = 'http://127.0.0.1:{}'.format(CLIENT_PORT), username='abraham', timeout= 990000)
 
 
 def modify_stats(request, action):
@@ -89,7 +94,7 @@ def get_creations():
     return jsonify(creations)
     
 
-def check_on_task(task_id):
+def check_on_task(task_id, token):
     time.sleep(5)    
     response = client.await_results(task_id)
     if 'output' not in response:
@@ -97,8 +102,6 @@ def check_on_task(task_id):
     img = response['output']['creation']
     config = response['output']['config']
     stats = {'praise': 0, 'burn': 0}
-    load_dotenv()
-    RESULTS_DIR = os.environ['RESULTS_DIR']      
     try:
         last_idx = int(sorted(glob.glob(f'{RESULTS_DIR}/*'))[-1].split('/')[-1])
     except:
@@ -115,21 +118,15 @@ def check_on_task(task_id):
        json.dump(config, outfile)
     with open(stats_path, 'w') as outfile:
        json.dump(stats, outfile)
-
-
-def submit_token(token):
-    if token == 'hello':
-        return True
-    else:
-        return False
+    tokens.spend_token(token, idx)
 
 
 @app.route('/request_creation', methods=['POST'])
 def request_creation():
     text_input = request.form['text_input']    
     token = request.form['token']
-    success = submit_token(token)
-    if success:
+    token_status = tokens.authenticate(token)
+    if token_status == 'unspent':
         config = {
             'model_name': 'imagenet', 
             'text_inputs': [{
@@ -149,9 +146,9 @@ def request_creation():
         response = client.run(config)
         task_id = response['token']
         result = {'result': 'success', 'task_id': task_id}
-        executor.submit(check_on_task, task_id)
+        executor.submit(check_on_task, task_id, token)
     else:
-        result = {'result': 'fail'}
+        result = {'result': token_status}
     return jsonify({}), 202, result
 
 
@@ -174,6 +171,16 @@ def get_status():
         pass
     return jsonify({}), 202, results
 
+
+@app.route('/create_new_tokens', methods=['POST'])
+def create_new_tokens():
+    amount = int(request.form['amount'])
+    note = request.form['note']
+    new_tokens = tokens.add_new_tokens(amount, note)
+    result = {'result': 'success', 'new_tokens': new_tokens}
+    return jsonify({}), 202, result
+
+
 @app.route('/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
@@ -185,6 +192,10 @@ def create():
 @app.route('/scripture')
 def scripture():
     return render_template('scripture.html')
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html', tokens=tokens.load_tokens())
 
 @app.route('/')
 def index():
