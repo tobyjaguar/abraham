@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+	<head>
+
+		<title>Abraham admin</title>
+		<link rel="stylesheet" type="text/css" href="css/main.css">
+		<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+		<link rel="apple-touch-icon" sizes="180x180" href="images/favicons/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="images/favicons/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="images/favicons/favicon-16x16.png">
+		<link rel="manifest" href="images/favicons/site.webmanifest">
+
+        <style>
+            #admin, #bCreate, #amount_input, #note_input {
+                font-size: 1.2em
+            }
+            .token {
+                border: 1px solid #aaa;
+                padding: 2px;
+            }
+            .token_key, .token_creation, .token_note {
+                display: inline-block;
+                width: 30%;
+            }
+            .even {
+                background-color: rgb(144, 174, 250, 0.5);
+            }
+            .legend {
+                background-color: blue;
+                color: white;
+            }
+        </style>
+	</head>
+
+	<body>
+		
+
+		<div id="container"> 
+            
+            <h2>Tokens:</h2>
+
+            
+            <ul>
+            <div class="token legend">
+                <div class="token_key"><b>Token</b></div><div class="token_creation"><b>Creation</b></div><div class="token_note"><b>Note</b></div>
+            </div>
+                {% for key, value in tokens.items() %}
+            <div class="token{% if loop.index is divisibleby 2 %} even{% endif %}">
+                <div class="token_key">{{key}}</div><div class="token_creation">{{value.creation}}</div><div class="token_note">{{value.note}}</div>
+            </div>
+            {% endfor %}
+            </ul>
+
+            <hr/>
+            <div id="admin">
+            <h2>Admin:</h2>
+
+            <br/>Amount: <input id="amount_input" type="text" value="5">
+            <br/>Note: <input id="note_input" type="text">
+            <br/><button id="bCreate">Create 5 new tokens</button>
+
+            <div id="status">
+
+            </div>
+            </div>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+
+        </div>
+
+
+        <script>
+            function create_new_tokens() {
+                $.ajax({
+                    type: 'POST',
+                    url: '/create_new_tokens',
+                    data: { 
+                        'note': $('#note_input').val(),
+                        'amount': parseInt($('#amount_input').val())
+                    }, 
+                    success: function(data, status, request) {
+                        result = request.getResponseHeader('result');
+                        if (result == 'success') {
+                            new_tokens = request.getResponseHeader('new_tokens');
+                            console.log(new_tokens)
+                            new_tokens = new_tokens.split(',')
+                            console.log(new_tokens)
+                            status_str = '<ul>Created the following new tokens:'
+                            new_tokens.forEach(function(t) {
+                                status_str += ('<li>'+t+'</li>')
+                            });
+                            status_str += '</ul>';
+                            $('#status').html(status_str);
+                        } 
+                        else if (result == 'fail') {
+                            alert('Error!');
+                        }
+                    },
+                });
+            }
+
+
+            $(function() {
+                $('#bCreate').click(create_new_tokens);
+            });
+        
+        </script>
+
+	</body>
+
+</html>

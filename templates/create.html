@@ -1,7 +1,8 @@
 <html>
   <head>
     <title>Creations</title>
-    <link rel="stylesheet" type="text/css" href="css/loading-bar.css"/>
+    <!-- <link rel="stylesheet" type="text/css" href="css/loading-bar.css"/> -->
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 
     <style>
         html {
@@ -26,6 +27,7 @@
             display: inline-block;
             margin: 15px;
             padding: 5px;
+            width: 542px;
             border: 1px solid #bbb;
         }
         .cr_img {
@@ -37,7 +39,7 @@
             padding-bottom: 10px;
         }
         
-        #text_input, #start-bg-job{
+        #text_input, #bCreate, #bStatus{
             font-size : 24px; 
             margin: auto;
         }
@@ -45,8 +47,14 @@
             width: 60%;
             margin: 10px;
         }        
-        #start-bg-job {
+        #bCreate {
+            display: inline-block;
             width: 30%;
+            margin: 10px;
+        }   
+        #bStatus {
+            display: inline-block;
+            width: 15%;
             margin: 10px;
         }   
         
@@ -56,162 +64,283 @@
             padding: 2px;
             font-size: 0.9em;
             margin: auto;
+            vertical-align: middle;
         }
+
+        #sortDate, #sortPraise, #sortBurn {
+            padding: 5px;
+        }
+        #sortDate:hover, #sortPraise:hover, .praise:hover, #sortBurn:hover, .burn:hover {
+            cursor: pointer;
+        }
+
+        .praise:hover, .burn:hover {
+            background-color: green;
+            color: white;
+        }
+
+        .cr_status {
+            font-size: 1.5em;
+            padding: 3px;
+        }
+
     </style>
-      
-    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-    <script type="text/javascript" src="js/loading-bar.js"></script>
 
   </head>
   <body>
     
-    Give a text input to Abraham. Or read the <a href="/scripture">Scripture</a>
+    Give a text input to <a href="/">Abraham</a>. Or read the <a href="/scripture">Scripture</a>
     <br/>
-    <input id="text_input" width=500></input>
+        
+    <input id="text_input" type="text">
     <br/>
-    <button id="start-bg-job">Create</button>
-    
+    <button id="bCreate">Create</button>
+        
     <div id="status"></div>
+
+    <br/>&nbsp;
+    <br/>
+    Sort by: 
+    <span id="sortDate">Newest</span>&nbsp;&nbsp;&nbsp;
+    <span id="sortPraise">Most praised</span>&nbsp;&nbsp;&nbsp;
+    <span id="sortBurn">Most burned</span>
+    <br/>
+
     <div id="results"></div>
+
       
     <script>
-        
-        var prev_state;
-        var bar1 = -1;
+              
+        let task_id = null;
+        let last_submitted_text = '';
+        let sort_by = 'date';
+        let action_disabled = [];
 
-        function refreshCachedImage(img_id, img_path) {
-            var img = document.getElementById(img_id);
-            img.src = img_path;
-        };
-        
-        function start_text2image() {
-            var text_input = $('#text_input')[0].value;
+        function modify_stats(index, div, action) {
+            if (action_disabled.indexOf(index) > -1) {
+                alert("Hey hey hey now... you can't praise or burn this again");
+                return;
+            }
             $.ajax({
                 type: 'POST',
-                url: '/start_creation',
+                url: '/'+action,
                 data: { 
-                    'text_input': text_input
-                },                
+                    'index': index,
+                }, 
                 success: function(data, status, request) {
-                    status_url = request.getResponseHeader('Location');
-                    update_progress(status_url);
+                    updated_number = request.getResponseHeader(action);
+                    emoji = ((action=='praise') ? '🙌' : '🔥');
+                    $(div).html('<span class="'+action+'">'+emoji+' '+updated_number+'</a>');
+                    action_disabled.push(index);
                 },
                 error: function() {
-                    alert('Unexpected error');
+                    alert('Unexpected error, please tell Gene :)');
                 }
             });
-        }
-        
-        function get_num_jobs() {
-            $.ajax({
-                type: 'GET',
-                url: '/getjobs',
-                success: function(data, status, request) {
-                    var num_scheduled = data['scheduled'];
-                    var num_active = data['active'];
-                    var num_reserved = data['reserved'];
-                    var ntx = num_scheduled + num_active + num_reserved;
-                    var tx = ntx;
-                    var $div = $("<div>", {"class": "job"});
-                    $div.html(tx);
-                    $("#jobs").append($div);
-                },
-                error: function() {
-                    alert('Unexpected error');
-                }
-            });
+            
         }
 
+        function praise(event) {
+            modify_stats(event.data.index, event.data.div, 'praise')
+        }
+
+        function burn(event) {
+            modify_stats(event.data.index, event.data.div, 'burn')
+        }
+
+        function highlight(class_str) {
+            $(class_str).css({"background-color": "black", "color": "white"})
+        }
+
+        function unhighlight(class_str) {
+            $(class_str).css({"background-color": "white", "color": "black"})
+        }
+
+        function sort_by_praise() {
+            sort_by = 'praise';
+            highlight('#sortPraise');
+            unhighlight('#sortBurn');
+            unhighlight('#sortDate');
+            refresh_creations();
+        }
+
+        function sort_by_burn() {
+            sort_by = 'burn';
+            unhighlight('#sortPraise');
+            highlight('#sortBurn');
+            unhighlight('#sortDate');
+            refresh_creations();
+        }
+
+        function sort_by_date() {
+            sort_by = 'newest';
+            unhighlight('#sortPraise');
+            unhighlight('#sortBurn');
+            highlight('#sortDate');
+            refresh_creations();
+        }
+        
         function refresh_creations() {
             $.ajax({
-                type: 'GET',
-                url: '/getimages',
+                type: 'POST',
+                url: '/get_creations',
+                data: { 
+                    'sort_by': sort_by
+                }, 
                 success: function(data, status, request) {
                     $('#results').empty();
                     for (var i=0; i<data.length; i++) {
+                        var idx = data[i]['index'];
                         var img_path = data[i]['image'];
                         var text_input = data[i]['text_input'];                        
+                        var praises = data[i]['praise'];                        
+                        var burns = data[i]['burn'];
                         var $div = $("<div>", {"class": "creation"});
                         var $div1 = $("<div>", {"class": "cr_text"});
                         var $div2 = $("<div>", {"class": "cr_img"});
+                        var $div3 = $("<div>", {"class": "cr_status"});
+                        var $div4 = $("<span>", {"class": "cr_praise"});
+                        var $div5 = $("<span>", {"class": "cr_burn"});
                         $div1.html(text_input);
                         $div2.html('<img src="'+img_path+'" />');
+                        $div3.html('');
+
+                        $div4.html('<span class="praise">🙌 '+praises+'</a>');
+                        $div5.html('<span class="burn">🔥 '+burns+'</a>');
+                        $div4.click({index: idx, div: $div4}, praise)
+                        $div5.click({index: idx, div: $div5}, burn)
+
+                        $div3.append($div4);
+                        $div3.append('&nbsp;&nbsp;&nbsp;&nbsp;')
+                        $div3.append($div5);
+
                         $div.append($div1);
                         $div.append($div2);
-                        $div.click(function(){ console.log(text_input) });
+                        $div.append($div3);
+                        //$div.click(function(){ console.log(text_input) });
                         $("#results").append($div);
                     }
                 },
                 error: function() {
-                    alert('Unexpected error');
+                    alert('Unexpected error, please tell Gene :)');
                 }
             });
         }
-        
-        function update_progress(status_url) {
-            $.getJSON(status_url, function(data) {
-                var state = data['state'];
-                var percent = parseInt(data['current'] * 100 / data['total']);
-                
-                if (state=='PENDING' && state != prev_state) {
-                    $("#status").empty();
-                    $("#status").html('<div class="pending">Pending in queue</div>');
-                } 
-                else if (state=='FAILURE' && state != prev_state) {
-                    $("#status").empty();
-                    $("#status").html('<div class="failed">Failed</div>');
-                } 
-                else if (state=='PROGRESS') {
-                    if (state != prev_state) {
-                        $("#status").empty();
-                        bar1 = new ldBar("#status", {
-                            "class": "label-center",
-                            "text-align": "center",
-                            "stroke": '#00f',
-                            "stroke-width": 10,
-                            "preset": "stripe",
-                            "value": percent
-                        });
-                    }
-                    bar1.set(percent);
-                }                
-                
-                if (state != 'PENDING' && state != 'PROGRESS') {
-                    $("#status").empty();
-                    if ('result' in data) {
-                        $("#status").empty();
-                        $("#status").html('<div class="finished">Finished!</div>');
-                        refresh_creations();
+
+        function request_creation() {
+            var text_input = $('#text_input').val()
+            if (!/\S/.test(text_input)) {
+                alert("No text input given!")
+                return;
+            }
+            var token = prompt("Please enter a token", "");
+            $.ajax({
+                type: 'POST',
+                url: '/request_creation',
+                data: { 
+                    'text_input': text_input,
+                    'token': token
+                }, 
+                success: function(data, status, request) {
+                    result = request.getResponseHeader('result');
+                    if (result == 'success') {
+                        task_id = request.getResponseHeader('task_id');
+                        last_submitted_text = text_input;
+                        var status_str = 'Submitted "'+last_submitted_text+'" (ID: '+task_id+')';
+                        $('#status').html(status_str);
+                        $('#text_input').val('')
                         setTimeout(function() {
-                            $("#status").empty();
+                            check_status();
+                        }, 2500);
+                    } 
+                    else if (result == 'spent') {
+                        alert('This token has already been used!');
+                    }
+                    else if (result == 'none') {
+                        alert('Token not recognized! To get tokens, please join the Discord and ask Gene :)');
+                    }
+                },
+                error: function() {
+                    alert('Unexpected error, please tell Gene :)');
+                }
+            });
+        }
+
+        function check_status() {
+            if (!task_id) {
+                alert('no job id found')
+                return;
+            }
+            $.ajax({
+                type: 'POST',
+                url: '/get_status',
+                data: { 
+                    'task_id': task_id
+                }, 
+                success: function(data, status, request) {
+                    status = request.getResponseHeader('status');
+                    if (status == 'complete') {
+                        setTimeout(function() {
+                            $('#status').html('');
+                            refresh_creations();
+                        }, 2000);
+                    } 
+                    else if (status == 'fetch_error') {
+                        console.log("server side error on fetch");
+                        setTimeout(function() {
+                            $('#status').html('');
+                            refresh_creations();
+                        }, 5000);
+                    }
+                    else if (status == 'failed') {
+                        output = request.getResponseHeader('output');
+                        status_str = '<span style="color:red">"'+last_submitted_text+'" failed: '+output+'</span>';
+                        status_str += '<br/><span style="color:red">ID: '+task_id+'</span>'
+                        $('#status').html(status_str);
+                    }
+                    else if (status == 'queued') {
+                        queue_position = parseInt(request.getResponseHeader('queue_position'));
+                        status_str = '"'+last_submitted_text+'" is #'+queue_position.toString()+' in queue';
+                        status_str += '<br/><span style="color:gray">ID: '+task_id+'</span>';
+                        $('#status').html(status_str);
+                        setTimeout(function() {
+                            check_status();
                         }, 5000);
                     }
                     else {
-                        $(status_div.childNodes[3]).text('Result: ' + data['state']);
+                        progress = request.getResponseHeader('progress');
+                        var status_str = '';
+                        if (progress === 'None') {
+                            status_str = '"'+last_submitted_text+'" is pending';
+                            status_str += '<br/><span style="color:gray">ID: '+task_id+'</span>'
+                        }
+                        else {
+                            pct = Math.ceil(100*progress);
+                            status_str = '"'+last_submitted_text+'" in progress: '+pct.toString()+'%';
+                            status_str += '<br/><span style="color:gray">ID: '+task_id+'</span>'
+                        }
+                        $('#status').html(status_str);
+                        setTimeout(function() {
+                            check_status();
+                        }, 2000);
                     }
+                },
+                error: function() {
+                    alert('Unexpected error, please tell Gene :)');
                 }
-                else {
-                    // rerun in 2 seconds
-                    setTimeout(function() {
-                        update_progress(status_url);
-                    }, 2000);
-                }
-                prev_state = state;
-
             });
         }
-        
+
         $(function() {
-            $('#start-bg-job').click(start_text2image);
+            $('#bCreate').click(request_creation);
+            $('#bStatus').click(check_status);
+
+            $('#sortDate').click(sort_by_date);
+            $('#sortPraise').click(sort_by_praise);
+            $('#sortBurn').click(sort_by_burn);
+
+            sort_by_date();
         });
-        $(function() {
-            $('#getimgs').click(refresh_creations);
-        });
-        $(function() {
-            $('#getjobs').click(get_num_jobs);
-        });
-        
-        refresh_creations();
 
     </script>
     
