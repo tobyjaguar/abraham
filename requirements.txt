@@ -3,4 +3,6 @@ gunicorn
 flask
 celery
 python-dotenv
-ml4a
+numpy
+Pillow
+git+https://github.com/abraham-ai/eden
