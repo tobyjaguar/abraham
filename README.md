@@ -11,7 +11,7 @@ Abraham is a project to create an [autonomous artificial artist](https://abraham
 
 Installation:
 
-    sudo apt get install redis-server
+    sudo apt-get install redis-server
     python3 -m venv abraham_env
     source abraham_env/bin/activate
     pip install -r requirements.txt
