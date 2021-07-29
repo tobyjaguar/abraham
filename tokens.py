@@ -55,7 +55,3 @@ def spend_token(token, task_id):
         return
     tokens[token]['creation'] = task_id
     save_tokens(tokens)
-
-
-if __name__ == '__main__':
-    main()
