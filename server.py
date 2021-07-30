@@ -13,31 +13,33 @@ from flask import Flask, request, render_template, send_from_directory
 from flask import session, flash, redirect, url_for, jsonify
 from eden.client import Client
 from eden.datatypes import Image
-
 import tokens
 
-load_dotenv()
-RESULTS_DIR = os.environ['RESULTS_DIR']      
-CLIENT_PORT = os.environ['CLIENT_PORT']
 
+# get client url for generator and log file location
+load_dotenv()
+CLIENT_URL = os.environ['CLIENT_URL']
+LOG_FILE = os.environ['LOG_FILE']
+
+# flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'top-secret!'
 
 # threading for checking on save
 executor = ThreadPoolExecutor(4)
 
+# open generator client
+client = Client(url = CLIENT_URL, username='abraham', timeout= 990000, verify_ssl=False)
+
 # setup logging
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("urllib3").propagate = False
 logging.basicConfig(
-    filename='../abraham.log', 
+    filename=LOG_FILE, 
     filemode='a', 
     level=logging.DEBUG,
     datefmt='%H:%M:%S',
     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s')
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("urllib3").propagate = False
-
-# text-to-image client
-client = Client(url = 'http://127.0.0.1:{}'.format(CLIENT_PORT), username='abraham', timeout= 990000)
 
 
 def modify_stats(request, action):
@@ -106,11 +108,11 @@ def check_on_task(task_id, token):
     config = response['output']['config']
     stats = {'praise': 0, 'burn': 0}
     try:
-        last_idx = int(sorted(glob.glob(f'{RESULTS_DIR}/*'))[-1].split('/')[-1])
+        last_idx = int(sorted(glob.glob('static/results/*'))[-1].split('/')[-1])
     except:
         last_idx = 0
     idx = 1 + last_idx
-    output_dir = f'{RESULTS_DIR}/%04d'%idx
+    output_dir = 'static/results/%04d'%idx
     image_path = '{}/{}'.format(output_dir, 'image.jpg')
     config_path = '{}/{}'.format(output_dir, 'config.json')
     stats_path = '{}/{}'.format(output_dir, 'stats.json')
@@ -141,7 +143,7 @@ def request_creation():
             'height': 512,
             'num_octaves': 3,
             'octave_scale': 2.0,
-            'num_iterations': [20, 30, 40],
+            'num_iterations': [200, 300, 400],
             'weight_decay': 0.1,
             'learning_rate': 0.1,
             'lr_decay_after': 400,
