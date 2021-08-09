@@ -1,3 +1,23 @@
 .App {
   text-align: center;
 }
+
+
+#results {
+  margin-top: 10px;
+}
+.creation {
+  display: inline-block;
+  margin: 15px;
+  padding: 5px;
+  width: 542px;
+  border: 1px solid #bbb;
+}
+.cr_img {
+  
+}
+
+.cr_text{
+  padding: 5px;
+  padding-bottom: 10px;
+}

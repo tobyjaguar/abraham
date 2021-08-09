@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 MongoClient.connect(mongoUrl, { useNewUrlParser: true })
   .then(client => {
     
-    const db = client.db('creations').collection('creations2')
+    const db = client.db('creations').collection('creations3')
 
     function checkTaskStatus(task_id) {
       return new Promise((resolve, reject) => {
@@ -106,9 +106,17 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
     });
     
 
-    app.post('/get_creations', (req, res) => {
-      creations.find().toArray()
+    app.get('/get_creations', (req, res) => {
+      db.find().toArray()
         .then(results => {
+          console.log(results)
+          let results2 = {
+            "items": [
+              { "id": 1, "name": "Apples",  "price": "$2" },
+              { "id": 2, "name": "Peaches", "price": "$5" }
+            ] 
+          }
+
           res.status(200).send(results); 
         })
         .catch(error => console.error(error))

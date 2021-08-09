@@ -15,6 +15,7 @@ import { formatEther, parseEther } from "@ethersproject/units";
 import { Hints, ExampleUI, Subgraph } from "./views"
 import { useThemeSwitcher } from "react-css-theme-switcher";
 import { INFURA_ID, DAI_ADDRESS, DAI_ABI, NETWORK, NETWORKS } from "./constants";
+import Item from "antd/lib/list/Item";
 const axios = require('axios');
 /*
     Welcome to 🏗 scaffold-eth !
@@ -68,7 +69,89 @@ const localProvider = new StaticJsonRpcProvider(localProviderUrlFromEnv);
 const blockExplorer = targetNetwork.blockExplorer;
 
 
-function NameForm(props) {
+
+
+function padLeadingZeros(num, size) {
+  var s = num+"";
+  while (s.length < size) s = "0" + s;
+  return s;
+}
+
+
+function Creation(props) {
+
+  return (
+    <div className="creation" >
+      {props.item.address} is the addy {props.item._id} and 
+      
+      
+
+      <div className="cr_text" >
+        {props.item.text_input }
+      </div>
+      <div className="cr_img" >
+        <img src={"results/"+padLeadingZeros(props.item.idx, 4)+"/image.jpg"} ></img>
+      </div>
+      <div className="cr_status" >
+        <span className="cr_praise">🙌 {props.item.praises}</span>
+        <span className="cr_burn">🔥 {props.item.burns}</span>
+      </div>
+    </div>
+  );
+}
+
+
+class Creations extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      error: null,
+      isLoaded: false,
+      items: []
+    };
+  }
+
+  componentDidMount() {
+    fetch(serverUrl+'get_creations')
+      .then(res => res.json())
+      .then(
+        (result) => {
+          this.setState({
+            isLoaded: true,
+            items: result
+          });
+        },
+        (error) => {
+          this.setState({
+            isLoaded: true,
+            error
+          });
+        }
+      )
+  }
+
+  render() {
+    const { error, isLoaded, items } = this.state;
+    if (error) {
+      return <div>Error: {error.message}</div>;
+    } else if (!isLoaded) {
+      return <div>Loading...</div>;
+    } else {
+      return (
+        <div id="results">
+          {items.map(item => (
+            <Creation key={item._id} item={item} />
+          ))}
+        </div>
+      );
+    }
+  }
+}
+
+
+
+
+function CreationTool(props) {
   
   const mainnetProvider = (scaffoldEthProvider && scaffoldEthProvider._network) ? scaffoldEthProvider : mainnetInfura
 
@@ -108,28 +191,22 @@ function NameForm(props) {
       evt.preventDefault();
       //alert(`Submitting Name ${text_input}`)
       
-      try{
+      try {
         let currentLoader = setTimeout(()=>{setLoading(false)},4000)
-        console.log("lets do it")
         const res = await axios.post(serverUrl+'request_creation', {
           address: address,
           text_input: text_input
         })
         clearTimeout(currentLoader)
-          // setLoading(false)
-        console.log("RESULT:",res)
         if(res.data){
           setResult(res.data)
         }
         
-      }catch(e){
+      } catch(e){
         console.log(e);
         message.error(' Sorry, the server is overloaded. 🧯🚒🔥');
         console.log("FAILED TO GET...")
       }
-    
-
-
 
   }
   return (
@@ -358,9 +435,9 @@ function App(props) {
     <div className="App">
 
       <Header />
-      <NameForm />
       {networkDisplay}
-      
+      <CreationTool />
+
       <ThemeSwitch />
       {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
       <div style={{textAlign: "center", padding: 10 }}>
@@ -382,6 +459,7 @@ function App(props) {
 
       {display}
 
+      <Creations />
       
 
     </div>

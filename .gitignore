@@ -6,7 +6,7 @@ __pycache__/
 tokens.json
 packages/backend/.env
 taming
-static/results
+packages/react-app/public/results/
 
 # scaffold-eth
 packages/backend/*.txt
