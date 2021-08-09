@@ -42,7 +42,7 @@ const serverUrl = "http://localhost:49832/"
 const targetNetwork = NETWORKS['mainnet']; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
-const DEBUG = true
+const DEBUG = false
 
 
 // 🛰 providers
@@ -68,13 +68,92 @@ const localProvider = new StaticJsonRpcProvider(localProviderUrlFromEnv);
 const blockExplorer = targetNetwork.blockExplorer;
 
 
+function NameForm(props) {
+  
+  const mainnetProvider = (scaffoldEthProvider && scaffoldEthProvider._network) ? scaffoldEthProvider : mainnetInfura
+
+  const [injectedProvider, setInjectedProvider] = useState();
+  /* 💵 This hook will get the price of ETH from 🦄 Uniswap: */
+  //const price = useExchangePrice(targetNetwork,mainnetProvider);
+
+  /* 🔥 This hook will get the price of Gas from ⛽️ EtherGasStation */
+  const gasPrice = useGasPrice(targetNetwork,"fast");
+  // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
+  const userProvider = useUserProvider(injectedProvider, localProvider);
+  const address = useUserAddress(userProvider);
+
+  // You can warn the user if you would like them to be on a specific network
+  let localChainId = localProvider && localProvider._network && localProvider._network.chainId
+  let selectedChainId = userProvider && userProvider._network && userProvider._network.chainId
+
+  // For more hooks, check out 🔗eth-hooks at: https://www.npmjs.com/package/eth-hooks
+
+  // The transactor wraps transactions and provides notificiations
+  const tx = Transactor(userProvider, gasPrice)
+
+  // Faucet Tx can be used to send funds from the faucet
+  const faucetTx = Transactor(localProvider, gasPrice)
+
+  // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
+  const yourLocalBalance = useBalance(localProvider, address);
+
+
+  const [ text_input, setName ] = useState("");
+  const [ loading, setLoading ] = useState()
+  const [ result, setResult ] = useState()
+
+
+
+  const handleSubmit = async (evt) => {
+      evt.preventDefault();
+      //alert(`Submitting Name ${text_input}`)
+      
+      try{
+        let currentLoader = setTimeout(()=>{setLoading(false)},4000)
+        console.log("lets do it")
+        const res = await axios.post(serverUrl+'request_creation', {
+          address: address,
+          text_input: text_input
+        })
+        clearTimeout(currentLoader)
+          // setLoading(false)
+        console.log("RESULT:",res)
+        if(res.data){
+          setResult(res.data)
+        }
+        
+      }catch(e){
+        console.log(e);
+        message.error(' Sorry, the server is overloaded. 🧯🚒🔥');
+        console.log("FAILED TO GET...")
+      }
+    
+
+
+
+  }
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        My Name is:
+        <input
+          type="text"
+          value={text_input}
+          onChange={e => setName(e.target.value)}
+        />
+      </label>
+      <input type="submit" value="Submit" />
+    </form>
+  );
+}
+
 function App(props) {
 
   const mainnetProvider = (scaffoldEthProvider && scaffoldEthProvider._network) ? scaffoldEthProvider : mainnetInfura
 
   const [injectedProvider, setInjectedProvider] = useState();
   /* 💵 This hook will get the price of ETH from 🦄 Uniswap: */
-  const price = useExchangePrice(targetNetwork,mainnetProvider);
+  //const price = useExchangePrice(targetNetwork,mainnetProvider);
 
   /* 🔥 This hook will get the price of Gas from ⛽️ EtherGasStation */
   const gasPrice = useGasPrice(targetNetwork,"fast");
@@ -233,6 +312,8 @@ function App(props) {
 
   } else if(isSigner){
     display = (
+
+
       <Button loading={loading} style={{marginTop:32}} type="primary" onClick={async ()=>{
 
         setLoading(true)
@@ -245,8 +326,7 @@ function App(props) {
             let sig = await userProvider.send("personal_sign", [ message, address ]);
             clearTimeout(currentLoader)
             currentLoader = setTimeout(()=>{setLoading(false)},4000)
-            console.log("sig",sig)
-            const res = await axios.post(serverUrl, {
+            const res = await axios.post(serverUrl+'reqtest', {
               address: address,
               message: message,
               signature: sig,
@@ -277,77 +357,11 @@ function App(props) {
   return (
     <div className="App">
 
-      {/* ✏️ Edit the header and change the title to your project name */}
       <Header />
-
+      <NameForm />
       {networkDisplay}
-      {/*
-
-      <BrowserRouter>
-
-        <Menu style={{ textAlign:"center" }} selectedKeys={[route]} mode="horizontal">
-          <Menu.Item key="/">
-            <Link onClick={()=>{setRoute("/")}} to="/">Mainnet DAI</Link>
-          </Menu.Item>
-          <Menu.Item key="/hints">
-            <Link onClick={()=>{setRoute("/hints")}} to="/hints">Hints</Link>
-          </Menu.Item>
-          <Menu.Item key="/exampleui">
-            <Link onClick={()=>{setRoute("/exampleui")}} to="/exampleui">ExampleUI</Link>
-          </Menu.Item>
-          <Menu.Item key="/subgraph">
-            <Link onClick={()=>{setRoute("/subgraph")}} to="/subgraph">Subgraph</Link>
-          </Menu.Item>
-        </Menu>
-
-
-        <Switch>
-          <Route exact path="/">
-
-            <Contract
-              name="DAI"
-              customContract={mainnetDAIContract}
-              signer={userProvider.getSigner()}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer={"https://etherscan.io/"}
-            />
-
-
-          </Route>
-          <Route path="/hints">
-            <Hints
-              address={address}
-              yourLocalBalance={yourLocalBalance}
-              mainnetProvider={mainnetProvider}
-              price={price}
-            />
-          </Route>
-          <Route path="/exampleui">
-            <ExampleUI
-              address={address}
-              userProvider={userProvider}
-              mainnetProvider={mainnetProvider}
-              localProvider={localProvider}
-              yourLocalBalance={yourLocalBalance}
-              price={price}
-              tx={tx}
-            />
-          </Route>
-          <Route path="/subgraph">
-            <Subgraph
-            subgraphUri={props.subgraphUri}
-            tx={tx}
-            mainnetProvider={mainnetProvider}
-            />
-          </Route>
-        </Switch>
-
-      </BrowserRouter>
-      */}
+      
       <ThemeSwitch />
-
-
       {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
       <div style={{textAlign: "center", padding: 10 }}>
          <Account
@@ -357,7 +371,7 @@ function App(props) {
            localProvider={localProvider}
            userProvider={userProvider}
            mainnetProvider={mainnetProvider}
-           price={price}
+           price={999}  // should be price
            web3Modal={web3Modal}
            loadWeb3Modal={loadWeb3Modal}
            logoutOfWeb3Modal={logoutOfWeb3Modal}
@@ -368,44 +382,7 @@ function App(props) {
 
       {display}
 
-      {/* 🗺 Extra UI like gas price, eth price, faucet, and support:
-       <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
-         <Row align="middle" gutter={[4, 4]}>
-           <Col span={8}>
-             <Ramp price={price} address={address} networks={NETWORKS}/>
-           </Col>
-
-           <Col span={8} style={{ textAlign: "center", opacity: 0.8 }}>
-             <GasGauge gasPrice={gasPrice} />
-           </Col>
-           <Col span={8} style={{ textAlign: "center", opacity: 1 }}>
-             <Button
-               onClick={() => {
-                 window.open("https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA");
-               }}
-               size="large"
-               shape="round"
-             >
-               <span style={{ marginRight: 8 }} role="img" aria-label="support">
-                 💬
-               </span>
-               Support
-             </Button>
-           </Col>
-         </Row>
-
-         <Row align="middle" gutter={[4, 4]}>
-           <Col span={24}>
-             {
-               faucetAvailable ? (
-                 <Faucet localProvider={localProvider} price={price} ensProvider={mainnetProvider}/>
-               ) : (
-                 ""
-               )
-             }
-           </Col>
-         </Row>
-       </div>*/}
+      
 
     </div>
   );
