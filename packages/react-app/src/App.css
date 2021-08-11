@@ -20,4 +20,76 @@
 .cr_text{
   padding: 5px;
   padding-bottom: 10px;
+  font-size: 2.0em;
 }
+
+
+
+#navbar {
+  background-color: #ff0;
+  width: 100%;
+  height: 80px;
+}
+
+#abraham_logo {
+  float: left;
+  background-color: #0f0;
+}
+
+#navbar_sections {
+  background-color: #f0f;
+  /* margin:0 auto; */
+  float: left;
+}
+
+#navbar_sections ul, li {
+  background-color: #00a;
+  margin: 0 auto;
+  font-size: 1.44em;
+  font-style: bold;
+  list-style: none;
+  display: inline;
+  margin-right: 64px;
+}
+
+#navbar_account {
+  background-color: #f00;
+  float: right;
+  margin: 15px;
+}
+
+
+#toolbar {
+  background-color: #0f0;
+  width: 100%;
+  height: 5.0em;
+  vertical-align: middle;
+}
+
+#views {
+  background-color: #5a9;
+  display: inline-block;
+  float: left;
+  padding: 15px;
+}
+
+#createTool {
+  background-color: #f0f;
+  display: inline-block;
+  float: right;
+  padding: 15px;
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
