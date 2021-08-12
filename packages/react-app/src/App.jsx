@@ -3,7 +3,7 @@ import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
 import "antd/dist/antd.css";
 import {  StaticJsonRpcProvider, JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import "./App.css";
-import { message, Row, Col, Button, Modal, Form, Progress, Input, Radio, Space, Menu, Alert, Switch as SwitchD } from "antd";
+import { message, Row, Col, Button, Modal, Form, Progress, Input, Radio, Space, Divider, DemoBox, Menu, Alert, Switch as SwitchD } from "antd";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import { useUserAddress } from "eth-hooks";
@@ -127,17 +127,28 @@ class Creations extends React.Component {
     const { error, isLoaded, items } = this.state;
     if (error) {
       return <div>Error: {error.message}</div>;
-    } else if (!isLoaded) {
+    } 
+    else if (!isLoaded) {
       return <div>Loading...</div>;
-    } else {
+    } 
+    else {
+      const colCount = 3;
+      const cols = [];
+      items.map(item => 
+        cols.push(
+          <Col key={item._id} span={24 / colCount} >
+            <Creation item={item} />
+          </Col>
+        )
+      )    
       return (
         <div id="results">
-          {items.map(item => (
-            <Creation key={item._id} item={item} />
-          ))}
+          <Row gutter={[16, 16]} align="bottom">
+            {cols}
+          </Row>          
         </div>
       );
-    }
+    }    
   }
 }
 
@@ -221,7 +232,7 @@ function CreationTool(props) {
     <>
       <Space>
         <Button type="primary" onClick={showModalS} size='large' >
-          Status
+          <Progress type="circle" width={30} percent={75} />
         </Button>
         <Modal
           title="Creations status"
@@ -598,7 +609,7 @@ function App(props) {
     </div>
       
       {/* {networkDisplay} */}
-      <ThemeSwitch />
+      
 
 
       
@@ -622,11 +633,11 @@ function App(props) {
       </Modal> */}
 
 
-
-      {/* <Creations /> */}
+      <p>&nbsp;</p>
+      <Creations />
 
       
-      
+      <ThemeSwitch />
 
 
     </div>

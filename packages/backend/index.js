@@ -26,6 +26,9 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
     const db = client.db('creations').collection('creations3')
 
     function checkTaskStatus(task_id) {
+
+      console.log(task_id)
+
       return new Promise((resolve, reject) => {
 
         let options = {
@@ -38,12 +41,17 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
 
         PythonShell.run('main.py', options, function (err, results) {
           if (err) {
-            results = {'result': 'failed', 'output': 'there was a fetch error'}  
+            console.log("ERROR!")
+            console.log(err)
+            results = {'result': 'failed', 'output': 'there was a fetching error'}  
             resolve(results)
+          } else {
+            console.log("the results are");
+            console.log(results)
+            //results = results.pop()
+            results = JSON.parse(results);
+            resolve(results);
           }
-          results = results.pop()
-          results = JSON.parse(results);
-          resolve(results);
         })
       })
     }
@@ -68,7 +76,7 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
         .catch(error => console.error(error))
       } 
       else if (results['status'] == 'failed') {
-        pass
+        pass;
       }
       else {
         setTimeout(function() {
@@ -81,7 +89,8 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
     app.post('/request_creation', (req, res) => {
       text_input = req.body['text_input']
       address = req.body['address']
-
+      console.log("lets run a thing")
+      console.log(text_input);
       let options = {
         mode: 'text',
         pythonPath: '/usr/local/bin/python3',
@@ -92,12 +101,12 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       
       PythonShell.run('main.py', options, function (err, results) {
         if (err) {
-          results = {'result': 'failed', 'output': 'there was an error'}  
+          results = {'status': 'failed', 'output': 'there was an error'}  
           res.status(200).send(results); 
           //throw err;
         } else {
           let task_id = results.pop()
-          results = {'result': task_id}
+          results = {'status': 'running', 'task_id': task_id}
           runStatusChecker(task_id, address);
           res.status(200).send(results); 
         }
@@ -106,17 +115,19 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
     });
     
 
+    app.post('/get_status', async (req, res) => {
+      task_id = req.body['task_id']
+      console.log("look for "+task_id)
+      let results = await checkTaskStatus(task_id)
+      console.log("---")
+      console.log(results)
+      res.status(200).send(results); 
+    });
+
+
     app.get('/get_creations', (req, res) => {
       db.find().toArray()
         .then(results => {
-          console.log(results)
-          let results2 = {
-            "items": [
-              { "id": 1, "name": "Apples",  "price": "$2" },
-              { "id": 2, "name": "Peaches", "price": "$5" }
-            ] 
-          }
-
           res.status(200).send(results); 
         })
         .catch(error => console.error(error))
