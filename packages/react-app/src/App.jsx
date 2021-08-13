@@ -68,11 +68,45 @@ function padLeadingZeros(num, size) {
   return s;
 }
 
+function calcTotalProgress(obj) {
+  var sum = 0;
+  var count = 0;
+  for( var el in obj ) {
+    if( obj[el].hasOwnProperty( 'progress' ) ) {
+      sum += parseFloat( obj[el]['progress'] );
+      count += 1;
+    }
+  }
+  return Math.ceil(100*sum/count);
+}
+    
+const lightBlue = '#8c8c9f';
+const midBlue = '#333254';
+const darkBlue = '#14133a';
+
 
 
 /// ============= CREATION ============= ///
 
 function Creation(props) {
+
+  const [praises, setPraises] = useState(props.item.praise);
+  const [burns, setBurns] = useState(props.item.burn);
+
+  async function praise() {
+    const results = await axios.post(serverUrl+'praise', {
+      creation_id: props.item._id
+    });
+    console.log(results.data)
+    setPraises(results.data.praise);
+  }  
+
+  async function burn() {
+    const results = await axios.post(serverUrl+'burn', {
+      creation_id: props.item._id
+    });
+    setBurns(results.data.burn);
+  }  
 
   return (
     <div className="creation" >
@@ -83,9 +117,9 @@ function Creation(props) {
         <img src={"results/"+padLeadingZeros(props.item.idx, 4)+"/image.jpg"} ></img>
       </div>
       <div className="cr_status" >
-        {shortenAddress(props.item.address, 4)}
-        <span className="cr_praise">🙌 {props.item.praise}</span>
-        <span className="cr_burn">🔥 {props.item.burn}</span>
+        {/* Created by: {shortenAddress(props.item.address, 4)} */}
+        <span onClick={praise} className="cr_praise">🙌 {praises}</span>
+        <span onClick={burn} className="cr_burn">🔥 {burns}</span>
       </div>
     </div>
   );
@@ -98,111 +132,191 @@ class Creations extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      error: null,
-      isLoaded: false,
-      items: []
+      creations: [],
+      loading: false,
+      page: 0,
+      prevY: 0
     };
   }
 
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.sort !== this.props.sort) {
+      this.setState({ creations: [], page: 0, prevY: 0});
+      this.getCreations(this.state.page);
+    } else if (prevProps.filter !== this.props.filter) {
+      this.setState({ creations: [], page: 0, prevY: 0});
+      this.getCreations(this.state.page);        
+    }
+  }
+
+  getCreations(page) {
+    this.setState({ loading: true });
+    axios({
+      method: 'post',
+      url: serverUrl+'get_creations',
+      data: {
+        sort_by: this.props.sort,
+        filter_by: this.props.filter,
+        skip: (page > 0) ? 16 * page : 0,
+        limit: 16
+      }
+    }).then(res => {
+      this.setState({ creations: [...this.state.creations, ...res.data] });
+      this.setState({ loading: false });
+    });
+  }
+
   componentDidMount() {
-    fetch(serverUrl+'get_creations')
-      .then(res => res.json())
-      .then(
-        (result) => {
-          this.setState({
-            isLoaded: true,
-            items: result
-          });
-        },
-        (error) => {
-          this.setState({
-            isLoaded: true,
-            error
-          });
-        }
-      )
+    this.getCreations(this.state.page);
+    var options = {
+      root: null,
+      rootMargin: "1000px",
+      threshold: 1.0
+    };
+    this.observer = new IntersectionObserver(
+      this.handleObserver.bind(this),
+      options
+    );
+    this.observer.observe(this.loadingRef);
+  }
+
+  handleObserver(entities, observer) {
+    const y = entities[0].boundingClientRect.y;
+    if (this.state.prevY > y) {
+      const nextPage = this.state.page + 1;
+      this.getCreations(nextPage);
+      this.setState({page: nextPage});
+    }
+    this.setState({prevY: y});
   }
 
   render() {
-    const { error, isLoaded, items } = this.state;
-    if (error) {
-      return <div>Error: {error.message}</div>;
-    } 
-    else if (!isLoaded) {
-      return <div>Loading...</div>;
-    } 
-    else {
-      const colCount = 3;
-      const cols = [];
-      items.map(item => 
-        cols.push(
-          <Col key={item._id} span={24 / colCount} >
-            <Creation item={item} />
-          </Col>
-        )
-      )    
-      return (
-        <div id="results">
-          <Row gutter={[16, 16]} align="bottom">
-            {cols}
-          </Row>          
+    const colCount = 3;
+    const cols = [];
+    this.state.creations.map(item => 
+      cols.push(
+        <Col key={item._id} span={24 / colCount} >
+          <Creation item={item} />
+        </Col>
+      )
+    )
+    return (
+      <div id="results">
+        <Row gutter={[16, 24]} align="bottom">
+          {cols}
+        </Row> 
+        <div
+          ref={loadingRef => (this.loadingRef = loadingRef)}
+          style={{height: "100px", margin: "30px"}}
+        >
+          <span style={{display:this.state.loading?"block":"none"}}>Loading...</span>
         </div>
-      );
-    }    
+      </div>
+    );
   }
+
 }
 
+
+/// ============= NAVIGATION ============= ///
+
+function QueryBar(props) {
+
+  const changeFilter = (evt) => {
+    props.onFilterChange(evt.target.value)
+  }
+
+  const changeSort = (evt) => {
+    props.onSortChange(evt.target.value)
+  }
+
+  return (
+    <Space>
+      <Radio.Group defaultValue="all" size="large" buttonStyle="solid" onChange={changeFilter}>
+        <Radio.Button value="all">All creations</Radio.Button>
+        <Radio.Button value={props.address}>My creations</Radio.Button>
+      </Radio.Group>
+      <Radio.Group defaultValue="newest" size="large"  buttonStyle="solid" onChange={changeSort}>
+        <Radio.Button value="newest">Newest</Radio.Button>
+        <Radio.Button value="praise">🙌</Radio.Button>
+        <Radio.Button value="burn">🔥</Radio.Button>
+      </Radio.Group>        
+    </Space>
+  )
+}
 
 
 /// ============= CREATION TOOL ============= ///
 
 function CreationTool(props) {
-
+  
   const [visibleT, setVisibleT] = useState(false);
   const [visibleS, setVisibleS] = useState(false);
+  const [visibleSB, setVisibleSB] = useState(false);
+  
   const [status, setStatus] = useState(false);
   const [confirmLoading, setConfirmLoading] = React.useState(false);
   const [form] = Form.useForm();
   const [creations, setCreations] = useState({})
-  
+  const [creationsProgress, setCreationsProgress] = useState(0);
+
   const showModalT = () => {setVisibleT(true)};
-  const showModalS = () => {setVisibleS(true)};
   const hideModalT = () => {setVisibleT(false)};
+  const showModalS = () => {setVisibleS(true)};
   const hideModalS = () => {setVisibleS(false)};
-  
+  const showButtonSB = () => {setVisibleSB(true)};
+  const hideButtonSB = () => {setVisibleSB(true)};
+
   const runStatusChecker = async (taskId, textInput) => {
     const results = await axios.post(serverUrl+'get_status', {
       task_id: taskId
     });
     creations[taskId] = results.data;
-    creations[taskId].textInput = textInput
-    setCreations({...creations})
+    creations[taskId].textInput = textInput;
+    setCreations({...creations});
     setStatus(creations);
+    setCreationsProgress(calcTotalProgress(creations));
+    if (Object.keys(creations).length > 0) {
+      showButtonSB();
+    }
     if (results.data.status == 'complete') {
       message.info('Creation "'+textInput+'" succeeded :)');
     } else if (results.data.status == 'failed') {
       message.error('Creation "'+textInput+'" failed :(');
+    } else if (results.data.status == 'queued') {
+      setTimeout(function() {
+        runStatusChecker(taskId, textInput);
+      }, 5000);  
     } else if (results.data.status == 'running') {
       setTimeout(function() {
         runStatusChecker(taskId, textInput);
-      }, 2500);  
+      }, 2000);  
     }
   }
 
-  const onSubmit = useCallback(async (values) => {
+  const onSubmit = useCallback(async (values, address) => {
     setConfirmLoading(true);
     let textInput = values.textInput;
+    console.log('the add is ', address)
     const results = await axios.post(serverUrl+'request_creation', {
-      address: 'address',
+      address: address,
       text_input: textInput
     })
     let status = results.data.status;    
     if (status == 'failed') {
       message.error('Error creating "'+textInput+'"');
-    } else if (status == 'running') {
+    } else if (status == 'queued') {
+      message.info('Creation "'+textInput+'" queued');
       let taskId = results.data.task_id;      
+      setTimeout(function() {
+        runStatusChecker(taskId, textInput);
+      }, 5000);  
+    } else if (status == 'running') {
       message.info('Abraham is creating "'+textInput+'"');
-      runStatusChecker(taskId, textInput)
+      let taskId = results.data.task_id;      
+      setTimeout(function() {
+        runStatusChecker(taskId, textInput);
+      }, 2000);  
     }
     setVisibleT(false);
     setConfirmLoading(false);
@@ -217,6 +331,9 @@ function CreationTool(props) {
     if (props.creation.status === 'running') { 
       return <span>{props.creation.textInput} <Progress percent={Math.ceil(100*props.creation.progress)} status="active" /></span>
     } 
+    else if (props.creation.status === 'queued') { 
+      return <span>{props.creation.textInput} <b>(Queue position {props.creation.queue_position})</b> <Progress percent={0} status="active" /></span>
+    } 
     else if (props.creation.status === 'complete') { 
       return <span>{props.creation.textInput} <Progress percent={100} /></span>
     } 
@@ -227,15 +344,15 @@ function CreationTool(props) {
       return <span>{JSON.stringify(props.creation)}</span>      
     }
   }
-
+  
   return (
     <>
       <Space>
-        <Button type="primary" onClick={showModalS} size='large' >
-          <Progress type="circle" width={30} percent={75} />
-        </Button>
+        {visibleSB && <Button type="primary" onClick={showModalS} size='large' >
+          <Progress className="progress-circle" strokeColor={'#333254'} type="circle" width={30} percent={creationsProgress} />
+        </Button>}
         <Modal
-          title="Creations status"
+          title="New Creations"
           visible={visibleS}
           onOk={hideModalS}
           onCancel={hideModalS}
@@ -266,7 +383,7 @@ function CreationTool(props) {
             </Button>
           ]}
         >
-          <Form form={form} onFinish={onSubmit} requiredMark={'optional'}> 
+          <Form form={form} onFinish={(values) => onSubmit(values, props.address)} requiredMark={'optional'}> 
             <Form.Item name="textInput" label="Text Input" 
             rules={[{required: true}]} >
               <Input />
@@ -320,8 +437,15 @@ function App(props) {
   const [ loadingCT, setLoadingCT ] = useState()
 
 
+  const [filter, setFilter] = useState('all')
+  const [sort, setSort] = useState('newest')
 
-
+  const handleFilterChange = function(f) {
+    setFilter(f);
+  }
+  const handleSortChange = function(s) {
+    setSort(s);
+  }
 
   ///////// CREATIONS
   //const [ creations, setCreations] = useState({})
@@ -537,32 +661,7 @@ function App(props) {
   }
 
 
-  function Navigator(props) {
-    
-    const changeView = (evt) => {
-      const view = evt.target.value;
-      console.log("view is", view)
-    }
 
-    const changeSort = (evt) => {
-      const sort = evt.target.value;
-      console.log("sort is", sort)
-    }
-
-    return (
-      <Space>
-        <Radio.Group defaultValue="all" size="large" buttonStyle="solid" onChange={changeView}>
-          <Radio.Button value="all">All creations</Radio.Button>
-          <Radio.Button value="my">My creations</Radio.Button>
-        </Radio.Group>
-        <Radio.Group defaultValue="new" size="large"  buttonStyle="solid" onChange={changeSort}>
-          <Radio.Button value="new">Newest</Radio.Button>
-          <Radio.Button value="praise">🙌</Radio.Button>
-          <Radio.Button value="burn">🔥</Radio.Button>
-        </Radio.Group>        
-      </Space>
-    )
-  }
 
 
 
@@ -570,44 +669,48 @@ function App(props) {
   return (
     <div className="App">
 
-      <div id="navbar">
+      <div id="topbar">
+        <div id="navbar">
 
-        <div id="navbar_account" >
-          <Account
-            connectText={"Connect Ethereum Wallet"}
-            onlyShowButton={!isSigner}
-            address={address}
-            localProvider={localProvider}
-            userProvider={userProvider}
-            mainnetProvider={mainnetProvider}
-            price={999}  // should be price
-            web3Modal={web3Modal}
-            loadWeb3Modal={loadWeb3Modal}
-            logoutOfWeb3Modal={logoutOfWeb3Modal}
-            blockExplorer={blockExplorer}
-          />
-          {faucetHint}         
+          <div id="navbar_account" >
+            <Account
+              connectText={"Connect Ethereum Wallet"}
+              onlyShowButton={!isSigner}
+              address={address}
+              localProvider={localProvider}
+              userProvider={userProvider}
+              mainnetProvider={mainnetProvider}
+              price={999}  // should be price
+              web3Modal={web3Modal}
+              loadWeb3Modal={loadWeb3Modal}
+              logoutOfWeb3Modal={logoutOfWeb3Modal}
+              blockExplorer={blockExplorer}
+            />
+            {faucetHint}         
+          </div>
+
+          <div id="navbar_sections">
+            <ul>
+              <li><a href="/"><img src="images/abraham.png" height="80px"></img></a></li>
+              <li><a href="/create">Creations</a></li>
+              <li><a href="/scripture">Scripture</a></li>
+            </ul>
+          </div>
+
         </div>
 
-        <div id="navbar_sections">
-          <ul>
-            <li><a href="/"><img src="images/abraham.png" height="80px"></img></a></li>
-            <li><a href="/create">Creations</a></li>
-            <li><a href="/scripture">Scripture</a></li>
-          </ul>
+        <div id="toolbar">
+          <div id="views">
+            <QueryBar address={address} onSortChange={handleSortChange} onFilterChange={handleFilterChange} />
+          </div>
+          <div id="createTool">
+            <CreationTool address={address} />
+          </div>
         </div>
 
       </div>
 
-    <div id="toolbar">
-      <div id="views">
-        <Navigator />
-      </div>
-      <div id="createTool">
-        <CreationTool />
-      </div>
-    </div>
-      
+
       {/* {networkDisplay} */}
       
 
@@ -634,15 +737,16 @@ function App(props) {
 
 
       <p>&nbsp;</p>
-      <Creations />
+      {/* <Creations /> */}
 
-      
+      <Creations filter={filter} sort={sort}/>
       <ThemeSwitch />
 
 
     </div>
   );
 }
+
 
 
 

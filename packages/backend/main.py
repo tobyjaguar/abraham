@@ -52,7 +52,7 @@ if action == 'create':
     'height': 512,
     'num_octaves': 3,
     'octave_scale': 2.0,
-    'num_iterations': [7, 3, 2],
+    'num_iterations': [3, 2, 2],
     'weight_decay': 0.1,
     'learning_rate': 0.1,
     'lr_decay_after': 400,
@@ -61,6 +61,7 @@ if action == 'create':
   response = client.run(config)
   task_id = response['token']
   print(task_id)
+  #print("WILL I SEE IT??")
 
 elif action == 'fetch':
   client = Client(url = CLIENT_URL, username='abraham', timeout= 990000, verify_ssl=False)

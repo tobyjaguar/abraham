@@ -24,6 +24,11 @@
   font-size: 2.0em;
 }
 
+.cr_status{
+  /* padding: 5px; */
+  /* padding-bottom: 10px; */
+  font-size: 2.0em;
+}
 
 
 #navbar {
@@ -44,13 +49,13 @@
 }
 
 #navbar_sections ul, li {
-  /* background-color: #00a; */
   margin: 0 auto;
   font-size: 1.44em;
   font-style: bold;
   list-style: none;
   display: inline;
   margin-right: 64px;
+  padding-left: 5px;
 }
 
 #navbar_account {
@@ -70,7 +75,7 @@
 #views {
   /* background-color: #5a9; */
   display: inline-block;
-  float: left;
+  float: left;  
   padding: 15px;
 }
 
@@ -78,19 +83,22 @@
   /* background-color: #f0f; */
   display: inline-block;
   float: right;
-  padding: 15px;
   
+  padding: 15px;
+}
+
+#results {
+  margin:1%;
+}
+
+#topbar {
+  /* background-color: #ff0;; */
 }
 
 
 
 
-
-
-
-
-
-
-
-
+.progress-circle.ant-progress .ant-progress-text {
+  color: #fff;
+}
 
