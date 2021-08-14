@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
+import { BrowserRouter, Switch, Route, Redirect, Link } from "react-router-dom";
 import "antd/dist/antd.css";
 import {  StaticJsonRpcProvider, JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import "./App.css";
@@ -8,9 +8,13 @@ import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import { useUserAddress } from "eth-hooks";
 import { useExchangePrice, useGasPrice, useUserProvider, useContractLoader, useContractReader, useEventListener, useBalance, useExternalContractLoader, useOnBlock } from "./hooks";
-import { Header, Account, Faucet, Ramp, Contract, GasGauge, ThemeSwitch } from "./components";
+import { Header, Account, Login, Faucet, Ramp, Contract, GasGauge, ThemeSwitch } from "./components";
 import { Transactor } from "./helpers";
 import { formatEther, parseEther } from "@ethersproject/units";
+
+
+
+
 //import Hints from "./Hints";
 //import { Hints, ExampleUI, Subgraph } from "./views"
 //import { useThemeSwitcher } from "react-css-theme-switcher";
@@ -330,17 +334,13 @@ function CreationTool(props) {
   function RunningCreation(props) {
     if (props.creation.status === 'running') { 
       return <span>{props.creation.textInput} <Progress percent={Math.ceil(100*props.creation.progress)} status="active" /></span>
-    } 
-    else if (props.creation.status === 'queued') { 
+    } else if (props.creation.status === 'queued') { 
       return <span>{props.creation.textInput} <b>(Queue position {props.creation.queue_position})</b> <Progress percent={0} status="active" /></span>
-    } 
-    else if (props.creation.status === 'complete') { 
+    } else if (props.creation.status === 'complete') { 
       return <span>{props.creation.textInput} <Progress percent={100} /></span>
-    } 
-    else if (props.creation.status === 'failed') { 
+    } else if (props.creation.status === 'failed') { 
       return <span>{props.creation.textInput} <Progress percent={100} status="exception" /></span>      
-    } 
-    else {
+    } else {
       return <span>{JSON.stringify(props.creation)}</span>      
     }
   }
@@ -397,165 +397,17 @@ function CreationTool(props) {
 
 
 
-
-
-
-
+/// ============= MAIN CREATIONS APP ============= ///
 
 function App(props) {
 
-  /* modal*/
-  // const [ showCT, setShowCT ] = useState(false);
-  // const [ showCS, setShowCS ] = useState(false);
-
-  const [isCTVisible, setIsCTVisible] = useState(false);
-  const showCT = () => {setIsCTVisible(true)};  
-  const handleCTOk = () => {setIsCTVisible(false)};
-
-  /*
-  const [confirmCTLoading, setConfirmCTLoading] = React.useState(false);
-  const [CTText, setCTText] = React.useState('Content of the modal');
-
-  const handleCTOk = () => {
-    setCTText('The modal will be closed after two seconds');
-    setConfirmCTLoading(true);
-    setTimeout(() => {
-      setIsCTVisible(false);
-      setConfirmCTLoading(false);
-    }, 4000);
-  };
-  */
-
-  const handleCTCancel = () => {setIsCTVisible(false)};
-
-  const [isCSVisible, setIsCSVisible] = useState(false);
-  const showCS = () => {setIsCSVisible(true)};  
-  const handleCSOk = () => {setIsCSVisible(false)};
-  const handleCSCancel = () => {setIsCSVisible(false)};
-
-  const [ loadingCS, setLoadingCS ] = useState()
-  const [ loadingCT, setLoadingCT ] = useState()
-
-
-  const [filter, setFilter] = useState('all')
-  const [sort, setSort] = useState('newest')
-
-  const handleFilterChange = function(f) {
-    setFilter(f);
-  }
-  const handleSortChange = function(s) {
-    setSort(s);
-  }
-
-  ///////// CREATIONS
-  //const [ creations, setCreations] = useState({})
-
-
-
-
-
   const mainnetProvider = (scaffoldEthProvider && scaffoldEthProvider._network) ? scaffoldEthProvider : mainnetInfura
-
   const [injectedProvider, setInjectedProvider] = useState();
-  /* 💵 This hook will get the price of ETH from 🦄 Uniswap: */
-  //const price = useExchangePrice(targetNetwork,mainnetProvider);
-
-  /* 🔥 This hook will get the price of Gas from ⛽️ EtherGasStation */
-  const gasPrice = useGasPrice(targetNetwork,"fast");
-  // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
   const userProvider = useUserProvider(injectedProvider, localProvider);
   const address = useUserAddress(userProvider);
-
-  // You can warn the user if you would like them to be on a specific network
-  let localChainId = localProvider && localProvider._network && localProvider._network.chainId
-  let selectedChainId = userProvider && userProvider._network && userProvider._network.chainId
-
-  // For more hooks, check out 🔗eth-hooks at: https://www.npmjs.com/package/eth-hooks
-
-  // The transactor wraps transactions and provides notificiations
-  const tx = Transactor(userProvider, gasPrice)
-
-  // Faucet Tx can be used to send funds from the faucet
-  const faucetTx = Transactor(localProvider, gasPrice)
-
-  // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
-  const yourLocalBalance = useBalance(localProvider, address);
-
-  // Just plug in different 🛰 providers to get your balance on different chains:
-  //const yourMainnetBalance = useBalance(mainnetProvider, address);
-
-  // Load in your local 📝 contract and read a value from it:
-  //const readContracts = useContractLoader(localProvider)
-
-  // If you want to make 🔐 write transactions to your contracts, use the userProvider:
-  //const writeContracts = useContractLoader(userProvider)
-
-  // EXTERNAL CONTRACT EXAMPLE:
-  //
-  // If you want to bring in the mainnet DAI contract it would look like:
-//  const mainnetDAIContract = useExternalContractLoader(mainnetProvider, DAI_ADDRESS, DAI_ABI)
-
-  // If you want to call a function on a new block
-  // useOnBlock(mainnetProvider, () => {
-  //   console.log(`⛓ A new mainnet block is here: ${mainnetProvider._lastBlockNumber}`)
-  // })
-
-  // Then read your DAI balance like:
-  //const myMainnetDAIBalance = useContractReader({DAI: mainnetDAIContract},"DAI", "balanceOf",["0x34aA3F359A9D614239015126635CE7732c18fDF3"])
-
-  // keep track of a variable from the contract in the local React state:
-  //const purpose = useContractReader(readContracts,"YourContract", "purpose")
-
-  //📟 Listen for broadcast events
-  //const setPurposeEvents = useEventListener(readContracts, "YourContract", "SetPurpose", localProvider, 1);
-
-  /*
-  const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
-  console.log("🏷 Resolved austingriffith.eth as:",addressFromENS)
-  */
-
-  //
-  // 🧫 DEBUG 👨🏻‍🔬
-  //
-  useEffect(()=>{
-    if(DEBUG && mainnetProvider && address && selectedChainId && yourLocalBalance /*&&  yourMainnetBalance &&readContracts && writeContracts && mainnetDAIContract*/){
-      console.log("_____________________________________ 🏗 scaffold-eth _____________________________________")
-      console.log("🌎 mainnetProvider",mainnetProvider)
-      console.log("🏠 localChainId",localChainId)
-      console.log("👩‍💼 selected address:",address)
-      console.log("🕵🏻‍♂️ selectedChainId:",selectedChainId)
-      console.log("💵 yourLocalBalance",yourLocalBalance?formatEther(yourLocalBalance):"...")
-      /*console.log("💵 yourMainnetBalance",yourMainnetBalance?formatEther(yourMainnetBalance):"...")*/
-    /*  console.log("📝 readContracts",readContracts) */
-      /*console.log("🌍 DAI contract on mainnet:",mainnetDAIContract)*/
-    /*  console.log("🔐 writeContracts",writeContracts) */
-    }
-  }, [mainnetProvider, address, selectedChainId, yourLocalBalance, /*yourMainnetBalance, readContracts, writeContracts, mainnetDAIContract*/])
-
-
-  let networkDisplay = ""
-  if(localChainId && selectedChainId && localChainId != selectedChainId ){
-    networkDisplay = (
-      <div style={{zIndex:2, position:'absolute', right:0,top:0,padding:16}}>
-        <Alert
-          message={"⚠️ Wrong Network"}
-          description={(
-            <div>
-              You have <b>{NETWORK(selectedChainId).name}</b> selected and you need to be on <b>{NETWORK(localChainId).name}</b>.
-            </div>
-          )}
-          type="error"
-          closable={false}
-        />
-      </div>
-    )
-  }else{
-    networkDisplay = (
-      <div style={{zIndex:-1, position:'absolute', right:154, top:8, padding:16, color:targetNetwork.color}}>
-        {targetNetwork.name}
-      </div>
-    )
-  }
+  
+  const [filter, setFilter] = useState('all')
+  const [sort, setSort] = useState('newest')
 
   const loadWeb3Modal = useCallback(async () => {
     const provider = await web3Modal.connect();
@@ -568,103 +420,41 @@ function App(props) {
     }
   }, [loadWeb3Modal]);
 
-  const [route, setRoute] = useState();
-  useEffect(() => {
-    setRoute(window.location.pathname)
-  }, [setRoute]);
+  const web3Modal = new Web3Modal({
+    // network: "mainnet", // optional
+    cacheProvider: true, // optional
+    providerOptions: {
+      walletconnect: {
+        package: WalletConnectProvider, // required
+        options: {
+          infuraId: INFURA_ID,
+        },
+      },
+    },
+  });
 
-  let faucetHint = ""
-  const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name == "localhost"
+  const logoutOfWeb3Modal = async () => {
+    await web3Modal.clearCachedProvider();
+    setTimeout(() => {
+      window.location.reload();
+    }, 1);
+  };
 
-  const [ faucetClicked, setFaucetClicked ] = useState( false );
-  if(!faucetClicked&&localProvider&&localProvider._network&&localProvider._network.chainId==31337&&yourLocalBalance&&formatEther(yourLocalBalance)<=0){
-    faucetHint = (
-      <div style={{padding:16}}>
-        <Button type={"primary"} onClick={()=>{
-          faucetTx({
-            to: address,
-            value: parseEther("0.01"),
-          });
-          setFaucetClicked(true)
-        }}>
-          💰 Grab funds from the faucet ⛽️
-        </Button>
-      </div>
-    )
-  }
+  window.ethereum && window.ethereum.on('chainChanged', chainId => {
+    web3Modal.cachedProvider &&
+    setTimeout(() => {
+      window.location.reload();
+    }, 1);
+  })
 
+  window.ethereum && window.ethereum.on('accountsChanged', accounts => {
+    web3Modal.cachedProvider &&
+    setTimeout(() => {
+      window.location.reload();
+    }, 1);
+  })
 
   const isSigner = injectedProvider && injectedProvider.getSigner && injectedProvider.getSigner()._isSigner
-
-  
-  const [ result, setResult ] = useState()
-
-  let display = ""
-  if(result){
-    let possibleTxId = result.substr(-66)
-    console.log("possibleTxId",possibleTxId)
-    let extraLink = ""
-    if(possibleTxId.indexOf("0x")==0){
-      extraLink = <a href={blockExplorer+"tx/"+possibleTxId} target="_blank">view transaction on etherscan</a>
-    }else{
-      possibleTxId=""
-    }
-    display = (
-      <div style={{marginTop:32}}>
-        {result.replace(possibleTxId,"")} {extraLink}
-      </div>
-    )
-
-  } else if(isSigner){
-    display = (
-
-      // <Button loading={loading} style={{marginTop:32}} type="primary" onClick={async ()=>{
-        <Button style={{marginTop:32}} type="primary" onClick={async ()=>{
-
-        //setLoading(true)
-        try{
-          const msgToSign = await axios.get(serverUrl)
-          console.log("msgToSign",msgToSign)
-          if(msgToSign.data && msgToSign.data.length > 32){//<--- traffic escape hatch?
-            // let currentLoader = setTimeout(()=>{setLoading(false)},4000)
-            let message = msgToSign.data.replace("**ADDRESS**",address)
-            let sig = await userProvider.send("personal_sign", [ message, address ]);
-            // clearTimeout(currentLoader)
-            // currentLoader = setTimeout(()=>{setLoading(false)},4000)
-            const res = await axios.post(serverUrl+'reqtest', {
-              address: address,
-              message: message,
-              signature: sig,
-            })
-            // clearTimeout(currentLoader)
-            //setLoading(false)
-            console.log("RESULT:",res)
-
-            if(res.data){
-              // setResult(res.data)
-              console.log(res.data)
-              console.log('fgjhfg')
-            }
-          }else{
-            //setLoading(false)
-            setResult("😅 Sorry, the server is overloaded. Please try again later. ⏳")
-          }
-        }catch(e){
-          message.error(' Sorry, the server is overloaded. 🧯🚒🔥');
-          console.log("FAILED TO GET...")
-        }
-      }}>
-
-        <span style={{marginRight:8}}>🔏</span>  sign a message with your ethereum wallet
-      </Button>
-    )
-  }
-
-
-
-
-
-
 
   return (
     <div className="App">
@@ -686,7 +476,7 @@ function App(props) {
               logoutOfWeb3Modal={logoutOfWeb3Modal}
               blockExplorer={blockExplorer}
             />
-            {faucetHint}         
+            {/* {faucetHint} */}
           </div>
 
           <div id="navbar_sections">
@@ -701,7 +491,7 @@ function App(props) {
 
         <div id="toolbar">
           <div id="views">
-            <QueryBar address={address} onSortChange={handleSortChange} onFilterChange={handleFilterChange} />
+            <QueryBar address={address} onSortChange={(s) => setSort(s)} onFilterChange={(f) => setFilter(f)} />
           </div>
           <div id="createTool">
             <CreationTool address={address} />
@@ -709,100 +499,52 @@ function App(props) {
         </div>
 
       </div>
-
-
-      {/* {networkDisplay} */}
       
-
-
-      
-      
-      {/* {display} */}
-      
-      {/* <Button loading={loadingCT} style={{margin:32, fontSize:"2.0em", height:"2.0em"}} type="primary" onClick={showCT}>
-        Create
-      </Button>
-      <Modal title="Creation tool" visible={isCTVisible} onOk={handleCTOk} onCancel={handleCTCancel}>
-        <CreationTool creations={creations} onSubmit={() => setIsCTVisible(true)} />
-      </Modal>
-
-
-
-      <Button loading={loadingCS} style={{margin:32, fontSize:"2.0em", height:"2.0em"}} type="primary" onClick={showCS}>
-        Status of creations
-      </Button>
-      <Modal title="Creations Status" visible={isCSVisible} onOk={handleCSOk} onCancel={handleCSCancel}>
-        <StatusCreations creations={creations} setCreations={setCreations} onSubmit={() => setIsCSVisible(false)} />
-      </Modal> */}
-
-
-      <p>&nbsp;</p>
-      {/* <Creations /> */}
-
       <Creations filter={filter} sort={sort}/>
       <ThemeSwitch />
-
 
     </div>
   );
 }
 
 
-
-
-
-
-// useEffect(() => {
-//   if (web3Modal.cachedProvider) {
-//     loadWeb3Modal();
-//   }
-// }, [loadWeb3Modal]);
-
-
-// const launchCreateModal = async () => {
-//   await web3Modal.clearCachedProvider();
-//   setTimeout(() => {
-//     window.location.reload();
-//   }, 1);
-// };
-
-
-
-/*
-  Web3 modal helps us "connect" external wallets:
-*/
-const web3Modal = new Web3Modal({
-  // network: "mainnet", // optional
-  cacheProvider: true, // optional
-  providerOptions: {
-    walletconnect: {
-      package: WalletConnectProvider, // required
-      options: {
-        infuraId: INFURA_ID,
-      },
-    },
-  },
-});
-
-const logoutOfWeb3Modal = async () => {
-  await web3Modal.clearCachedProvider();
-  setTimeout(() => {
+function Admin() {
+  
+  const handleLogout = () => {
+    localStorage.clear();
     window.location.reload();
-  }, 1);
-};
+  };
+  return (
+    <div className="App">
+      <h1>Admin</h1>
+      <button className="btn btn-primary" onClick={handleLogout}>
+        Logout
+      </button>
+    </div>
+  );
+}
 
- window.ethereum && window.ethereum.on('chainChanged', chainId => {
-  web3Modal.cachedProvider &&
-  setTimeout(() => {
-    window.location.reload();
-  }, 1);
-})
 
- window.ethereum && window.ethereum.on('accountsChanged', accounts => {
-  web3Modal.cachedProvider &&
-  setTimeout(() => {
-    window.location.reload();
-  }, 1);
-})
+function ProtectedRoute({ component: Component, ...restOfProps }) {
+  const isAuthenticated = localStorage.getItem("isAuthenticated");
+  return (
+    <Route
+      {...restOfProps}
+      render={(props) =>
+        isAuthenticated ? <Component {...props} /> : <Login/>
+      }
+    />
+  );
+}
 
-export default App;
+
+function Home() {
+  return (
+    <BrowserRouter>
+      <Route path="/" exact component={() => <App />} />
+      <ProtectedRoute path="/admin" exact component={Admin} />
+    </BrowserRouter>
+  );
+}
+
+export default Home;
