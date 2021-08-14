@@ -1,18 +1,16 @@
 import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
+import md5 from "blueimp-md5"
 
 
-export default function Login() {
+export default function Login(props) {
   const [userData, setUserData] = useState({ username: "", password: "" });
   const [errorMessage, setErrorMessage] = useState({ value: "" });
   const history = useHistory();
   console.log("auth", localStorage.getItem("isAuthenticated"));
-
+  
   const handleInputChange = (e) => {
     e.persist();
-    console.log("handle  me")
-    console.log(e)
-    console.log(e.target)
     setUserData((prevState) => {
       return {
         ...prevState,
@@ -23,22 +21,26 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    //if username or password field is empty, return error message
     if (userData.username === "" || userData.password === "") {
       setErrorMessage((prevState) => ({
         value: "Empty username/password field",
       }));
-    } else if (userData.username == "admin" && userData.password == "123456") {
-      localStorage.setItem("isAuthenticated", "true");
-      window.location.reload()
-    } else {
-      setErrorMessage((prevState) => ({ value: "Invalid username/password" }));
+    } 
+    else {
+      const usernameCorrect = (userData.username == props.credentials.username)
+      const passwordCorrect = (md5(userData.password) == props.credentials.passwordHash)
+      if (usernameCorrect && passwordCorrect) {
+        localStorage.setItem("isAuthenticated", "true");
+        window.location.reload()
+      } else {
+        setErrorMessage((prevState) => ({ value: "Invalid username/password" }));
+      }
     }
   };
 
   return (
     <div className="text-center">
-      <h1>Should you be here?</h1>
+      <h1>Are you one of the Chosen People?</h1>
       <form
         style={{
           display: "flex",

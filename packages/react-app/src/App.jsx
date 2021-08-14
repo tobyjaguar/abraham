@@ -4,6 +4,7 @@ import "antd/dist/antd.css";
 import {  StaticJsonRpcProvider, JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import "./App.css";
 import { message, Row, Col, Button, Modal, Form, Progress, Input, Radio, Space, Divider, DemoBox, Menu, Alert, Switch as SwitchD } from "antd";
+import Admin from './Admin';
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import { useUserAddress } from "eth-hooks";
@@ -11,53 +12,19 @@ import { useExchangePrice, useGasPrice, useUserProvider, useContractLoader, useC
 import { Header, Account, Login, Faucet, Ramp, Contract, GasGauge, ThemeSwitch } from "./components";
 import { Transactor } from "./helpers";
 import { formatEther, parseEther } from "@ethersproject/units";
-
-
-
-
-//import Hints from "./Hints";
-//import { Hints, ExampleUI, Subgraph } from "./views"
-//import { useThemeSwitcher } from "react-css-theme-switcher";
 import { INFURA_ID, DAI_ADDRESS, DAI_ABI, NETWORK, NETWORKS } from "./constants";
-// import Item from "antd/lib/list/Item";
-
-
+require('dotenv').config()
 
 const axios = require('axios');
-
-
-
-
-
-
-
-
-
 const serverUrl = "http://localhost:49832/"
-const targetNetwork = NETWORKS['mainnet'];  // localhost, rinkeby, xdai, mainnet
-const DEBUG = false
+const targetNetwork = NETWORKS['mainnet']; 
 
-
-// 🛰 providers
-if(DEBUG) console.log("📡 Connecting to Mainnet Ethereum");
-// const mainnetProvider = getDefaultProvider("mainnet", { infura: INFURA_ID, etherscan: ETHERSCAN_KEY, quorum: 1 });
-// const mainnetProvider = new InfuraProvider("mainnet",INFURA_ID);
-//
-// attempt to connect to our own scaffold eth rpc and if that fails fall back to infura...
-// Using StaticJsonRpcProvider as the chainId won't change see https://github.com/ethers-io/ethers.js/issues/901
 const scaffoldEthProvider = new StaticJsonRpcProvider("https://rpc.scaffoldeth.io:48544")
 const mainnetInfura = new StaticJsonRpcProvider("https://mainnet.infura.io/v3/" + INFURA_ID)
-// ( ⚠️ Getting "failed to meet quorum" errors? Check your INFURA_ID )
-
-// 🏠 Your local provider is usually pointed at your local blockchain
 const localProviderUrl = targetNetwork.rpcUrl;
-// as you deploy to other networks you can set REACT_APP_PROVIDER=https://dai.poa.network in packages/react-app/.env
 const localProviderUrlFromEnv = process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : localProviderUrl;
-if(DEBUG) console.log("🏠 Connecting to provider:", localProviderUrlFromEnv);
 const localProvider = new StaticJsonRpcProvider(localProviderUrlFromEnv);
-
-const blockExplorer = targetNetwork.blockExplorer; // 🔭 block explorer URL
-
+const blockExplorer = targetNetwork.blockExplorer; 
 
 
 /// ============= Helper functions ============= ///
@@ -508,35 +475,25 @@ function App(props) {
 }
 
 
-function Admin() {
-  
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.reload();
-  };
-  return (
-    <div className="App">
-      <h1>Admin</h1>
-      <button className="btn btn-primary" onClick={handleLogout}>
-        Logout
-      </button>
-    </div>
-  );
-}
-
-
 function ProtectedRoute({ component: Component, ...restOfProps }) {
   const isAuthenticated = localStorage.getItem("isAuthenticated");
+
+
+  console.log('process', process.env.REACT_APP_BASE_URL)
+  const passwordHash = process.env.REACT_APP_ADMIN_PASSWORD_HASH;
+  console.log(passwordHash)
+
+  let credentials = {username: 'admin', passwordhash: passwordHash}
+  
   return (
     <Route
       {...restOfProps}
       render={(props) =>
-        isAuthenticated ? <Component {...props} /> : <Login/>
+        isAuthenticated ? <Component {...props} /> : <Login credentials={credentials}/>
       }
     />
   );
 }
-
 
 function Home() {
   return (
