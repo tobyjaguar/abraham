@@ -23,10 +23,28 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
+function randomString(length) {
+  var result = '';
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for ( var i = 0; i < length; i++ ) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+function formatDate(date) {
+  const mm = date.getMonth() >= 10 ? date.getMonth() : `0${date.getMonth()}`;
+  const dd = date.getDate() >= 10 ? date.getDate() : `0${date.getDate()}`;
+  const hh = date.getHours() >= 10 ? date.getHours() : `0${date.getHours()}`;
+  const MM = date.getMinutes() >= 10 ? date.getMinutes() : `0${date.getMinutes()}`;
+  return `${date.getFullYear()}-${mm}-${dd} ${hh}:${MM}`;
+}
+
 MongoClient.connect(mongoUrl, { useNewUrlParser: true })
   .then(client => {
     
-    const db = client.db('creations').collection('creations3')
+    const creations = client.db('creations').collection('creations3')
+    const tokens = client.db('creations').collection('tokens3')
 
     function checkTaskStatus(task_id) {
 
@@ -53,12 +71,12 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
     
     async function update_stats(req, res, type) {
       creation_id = req.body['creation_id']
-      db.updateOne(
+      creations.updateOne(
         {_id: ObjectId(creation_id)}, 
         {$inc: {[type]: 1}}
       )
       .then(result => {
-        db.findOne({_id: ObjectId(creation_id)}).then(result => {
+        creations.findOne({_id: ObjectId(creation_id)}).then(result => {
           res.status(200).send({[type]: result[type]}); 
         })
         .catch(error => console.error(error))
@@ -80,7 +98,7 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
         text_input = results['output']['config']['text_inputs'][0]['text']
         index = results['index']
         console.log("the address is", address)
-        db.insertOne({
+        creations.insertOne({
           'date': new Date(),
           'address': address,
           'text_input': text_input,
@@ -144,7 +162,7 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       filter_by = req.body['filter_by']
       skip = req.body['skip']
       limit = req.body['limit']
-      let filter_query = {}
+      format_date = req.body['format_date']
       let sort_query = {sort:{date:1}};
       if (sort_by == 'newest') {
         sort_query = {sort:{date:-1}};
@@ -153,20 +171,79 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       } else if (sort_by =='burn') {
         sort_query = {sort:{burn:-1}};
       }
+      let filter_query = {}
       if (filter_by !== 'all') {
         filter_query.address = filter_by
       }
 
-      db.find(filter_query, sort_query)
+      creations.find(filter_query, sort_query)
         .skip(skip)
         .limit(limit)
         .toArray()
         .then(results => {
+          if (format_date) {
+            Object.keys(results).forEach(function(key){
+              if (results[key].date) {
+                results[key].date = formatDate(results[key].date) 
+              }
+            });
+          }
           res.status(200).send(results); 
         })
         .catch(error => console.error(error))
       }
     )
+
+    // TOKENS
+    app.post('/get_tokens', (req, res) => {
+      tokens.find({}).toArray().then(results => {
+        Object.keys(results).forEach(function(key){
+          if (results[key].date) {
+            results[key].date = formatDate(results[key].date) 
+          }
+        });
+        res.status(200).send(results); 
+      }).catch(error => console.error(error))
+    })
+
+    app.post('/add_tokens', async (req, res) => {
+      amount = req.body['amount']
+      note = req.body['note']
+      address = req.body['address']
+      address = address ? address : null;
+      let success = true;
+      for (var i=0; i<amount; i++) {
+        tokens.insertOne({
+          'date': new Date(),
+          'note': note,
+          'address': address,
+          'token': randomString(8)
+        })
+        .then(result => {
+          const _id = result.insertedId;          
+        })
+        .catch(error => {
+          console.error(error);
+          success = false;
+        });  
+      }
+      res.status(200).send({'result': success?'success':'fail'});       
+    })
+
+
+    
+  
+
+
+
+
+
+
+
+
+
+
+
 
     if (fs.existsSync('server.key') && fs.existsSync('server.cert')){
       https.createServer({

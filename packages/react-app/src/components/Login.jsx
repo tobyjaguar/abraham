@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import md5 from "blueimp-md5"
 
@@ -27,7 +27,7 @@ export default function Login(props) {
       }));
     } 
     else {
-      const usernameCorrect = (userData.username == props.credentials.username)
+      const usernameCorrect = (userData.username == props.credentials.userName)
       const passwordCorrect = (md5(userData.password) == props.credentials.passwordHash)
       if (usernameCorrect && passwordCorrect) {
         localStorage.setItem("isAuthenticated", "true");

@@ -355,6 +355,10 @@ function CreationTool(props) {
             rules={[{required: true}]} >
               <Input />
             </Form.Item>
+            <Form.Item name="token" label="Token" 
+            rules={[{required: true}]} >
+              <Input />
+            </Form.Item>
           </Form>
         </Modal>
       </Space>
@@ -468,6 +472,7 @@ function App(props) {
       </div>
       
       <Creations filter={filter} sort={sort}/>
+      
       <ThemeSwitch />
 
     </div>
@@ -477,19 +482,16 @@ function App(props) {
 
 function ProtectedRoute({ component: Component, ...restOfProps }) {
   const isAuthenticated = localStorage.getItem("isAuthenticated");
-
-
-  console.log('process', process.env.REACT_APP_BASE_URL)
-  const passwordHash = process.env.REACT_APP_ADMIN_PASSWORD_HASH;
-  console.log(passwordHash)
-
-  let credentials = {username: 'admin', passwordhash: passwordHash}
   
   return (
     <Route
       {...restOfProps}
       render={(props) =>
-        isAuthenticated ? <Component {...props} /> : <Login credentials={credentials}/>
+        isAuthenticated ? 
+        <Component {...props} /> : 
+        <Login credentials={
+          {userName: 'admin', passwordHash: process.env.REACT_APP_ADMIN_PASSWORD_HASH}
+        } />
       }
     />
   );
