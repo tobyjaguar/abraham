@@ -13,6 +13,7 @@ import { Header, Account, Login, Faucet, Ramp, Contract, GasGauge, ThemeSwitch }
 import { Transactor } from "./helpers";
 import { formatEther, parseEther } from "@ethersproject/units";
 import { INFURA_ID, DAI_ADDRESS, DAI_ABI, NETWORK, NETWORKS } from "./constants";
+import { ConsoleSqlOutlined, PropertySafetyOutlined } from "@ant-design/icons";
 require('dotenv').config()
 
 const axios = require('axios');
@@ -25,6 +26,33 @@ const localProviderUrl = targetNetwork.rpcUrl;
 const localProviderUrlFromEnv = process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : localProviderUrl;
 const localProvider = new StaticJsonRpcProvider(localProviderUrlFromEnv);
 const blockExplorer = targetNetwork.blockExplorer; 
+
+
+/*
+admin
+ - three sections
+ - highlight active
+ - get eden_clip info
+ - automatic updates
+
+features
+ - error handling
+ - eden.js + image_to_db
+ - praise/burn limits
+ - modal view whole image
+
+minor bugs
+ x display all/new
+ x keep checking, update
+ - {created by}
+ x update {token count}
+ x close creation status
+
+deploy
+ - static pages (splash3)
+ - gospel
+*/
+
 
 
 /// ============= Helper functions ============= ///
@@ -48,7 +76,11 @@ function calcTotalProgress(obj) {
       count += 1;
     }
   }
-  return Math.ceil(100*sum/count);
+  if (count == 0) {
+    return 100;
+  } else {
+    return Math.ceil(100*sum/count);
+  }
 }
     
 const lightBlue = '#8c8c9f';
@@ -68,7 +100,6 @@ function Creation(props) {
     const results = await axios.post(serverUrl+'praise', {
       creation_id: props.item._id
     });
-    console.log(results.data)
     setPraises(results.data.praise);
   }  
 
@@ -117,6 +148,17 @@ class Creations extends React.Component {
     } else if (prevProps.filter !== this.props.filter) {
       this.setState({ creations: [], page: 0, prevY: 0});
       this.getCreations(this.state.page);        
+    } else if (prevProps.newReady !== this.props.newReady) {
+      console.log("new ready "+this.props.newReady);
+      axios({
+        method: 'post',
+        url: serverUrl+'get_creations',
+        data: {
+          filter_by: 'all', filter_by_task: this.props.newReady, skip: 0, limit: 1
+        }
+      }).then(res => {
+        this.setState({ creations: [...res.data, ...this.state.creations] });
+      });
     }
   }
 
@@ -132,6 +174,8 @@ class Creations extends React.Component {
         limit: 16
       }
     }).then(res => {
+      console.log('got res')
+      console.log(res.data)
       this.setState({ creations: [...this.state.creations, ...res.data] });
       this.setState({ loading: false });
     });
@@ -193,6 +237,8 @@ class Creations extends React.Component {
 
 function QueryBar(props) {
 
+  const [filterVisible, setFilterVisible] = useState(false);
+
   const changeFilter = (evt) => {
     props.onFilterChange(evt.target.value)
   }
@@ -201,12 +247,20 @@ function QueryBar(props) {
     props.onSortChange(evt.target.value)
   }
 
+  useEffect(() => {
+    if (props.address) {
+      setFilterVisible(props.isSigner)
+    }
+  }, [props.address]);
+
   return (
     <Space>
+      <div style={{display: filterVisible?'block':'none'}}>
       <Radio.Group defaultValue="all" size="large" buttonStyle="solid" onChange={changeFilter}>
         <Radio.Button value="all">All creations</Radio.Button>
         <Radio.Button value={props.address}>My creations</Radio.Button>
       </Radio.Group>
+      </div>
       <Radio.Group defaultValue="newest" size="large"  buttonStyle="solid" onChange={changeSort}>
         <Radio.Button value="newest">Newest</Radio.Button>
         <Radio.Button value="praise">🙌</Radio.Button>
@@ -220,16 +274,17 @@ function QueryBar(props) {
 /// ============= CREATION TOOL ============= ///
 
 function CreationTool(props) {
-  
-  const [visibleT, setVisibleT] = useState(false);
-  const [visibleS, setVisibleS] = useState(false);
-  const [visibleSB, setVisibleSB] = useState(false);
-  
-  const [status, setStatus] = useState(false);
+
   const [confirmLoading, setConfirmLoading] = React.useState(false);
   const [form] = Form.useForm();
   const [creations, setCreations] = useState({})
   const [creationsProgress, setCreationsProgress] = useState(0);
+  const [address, setAddress] = useState(null);
+  const [tokens, setTokens] = useState([])
+
+  const [visibleT, setVisibleT] = useState(false);
+  const [visibleS, setVisibleS] = useState(false);
+  const [visibleSB, setVisibleSB] = useState(false);
 
   const showModalT = () => {setVisibleT(true)};
   const hideModalT = () => {setVisibleT(false)};
@@ -238,6 +293,27 @@ function CreationTool(props) {
   const showButtonSB = () => {setVisibleSB(true)};
   const hideButtonSB = () => {setVisibleSB(true)};
 
+  const updateAddress = async (props) => {
+    if (props.isSigner) {
+      console.log('lets look?')
+      const results = await axios.post(serverUrl+'get_tokens', {
+        address: props.address,
+        exclude_spent: true
+      });
+      setAddress(props.address);
+      setTokens(results.data);
+    } else {
+      setAddress(null);
+      setTokens([]);
+    }
+  };
+
+  useEffect(() => {
+    if (props.address) {
+      updateAddress(props);
+    }
+  }, [props.address]);
+
   const runStatusChecker = async (taskId, textInput) => {
     const results = await axios.post(serverUrl+'get_status', {
       task_id: taskId
@@ -245,13 +321,16 @@ function CreationTool(props) {
     creations[taskId] = results.data;
     creations[taskId].textInput = textInput;
     setCreations({...creations});
-    setStatus(creations);
     setCreationsProgress(calcTotalProgress(creations));
     if (Object.keys(creations).length > 0) {
       showButtonSB();
     }
     if (results.data.status == 'complete') {
       message.info('Creation "'+textInput+'" succeeded :)');
+      console.log("go!")
+      setTimeout(function() {
+        props.onNewReady(taskId)
+      }, 1000); 
     } else if (results.data.status == 'failed') {
       message.error('Creation "'+textInput+'" failed :(');
     } else if (results.data.status == 'queued') {
@@ -265,20 +344,26 @@ function CreationTool(props) {
     }
   }
 
-  const onSubmit = useCallback(async (values, address) => {
+  const onSubmit = useCallback(async (values, address, tokens) => {
     setConfirmLoading(true);
     let textInput = values.textInput;
-    console.log('the add is ', address)
+    if (address) {
+      var token = tokens.length > 0 ? tokens[0].token : null;
+    } else {
+      var token = values.token;
+    }
     const results = await axios.post(serverUrl+'request_creation', {
       address: address,
-      text_input: textInput
+      text_input: textInput,
+      token: token
     })
     let status = results.data.status;    
     if (status == 'failed') {
-      message.error('Error creating "'+textInput+'"');
+      let reason = token === null ? 'No tokens left' : results.data.output;
+      message.error('Error creating "'+textInput+'": '+reason);
     } else if (status == 'queued') {
       message.info('Creation "'+textInput+'" queued');
-      let taskId = results.data.task_id;      
+      let taskId = results.data.task_id;  
       setTimeout(function() {
         runStatusChecker(taskId, textInput);
       }, 5000);  
@@ -288,6 +373,13 @@ function CreationTool(props) {
       setTimeout(function() {
         runStatusChecker(taskId, textInput);
       }, 2000);  
+    }
+    if ((status == 'running' || status == 'queued' && address)) {
+      const tokenIdx = tokens.findIndex(item => item.token === token);
+      if (tokenIdx > -1) {
+        tokens.splice(tokenIdx,1);
+      }
+      setTokens(tokens);
     }
     setVisibleT(false);
     setConfirmLoading(false);
@@ -311,7 +403,7 @@ function CreationTool(props) {
       return <span>{JSON.stringify(props.creation)}</span>      
     }
   }
-  
+
   return (
     <>
       <Space>
@@ -330,8 +422,8 @@ function CreationTool(props) {
           ]}
         >
           <div>      
-            {Object.keys(status).map((key, index) => ( 
-              <RunningCreation key={index} creation={status[key]} />
+            {Object.keys(creations).map((key, index) => ( 
+              <RunningCreation key={index} creation={creations[key]} />
             ))}
           </div>
         </Modal>
@@ -350,15 +442,21 @@ function CreationTool(props) {
             </Button>
           ]}
         >
-          <Form form={form} onFinish={(values) => onSubmit(values, props.address)} requiredMark={'optional'}> 
+          <Form form={form} onFinish={(values) => onSubmit(values, address, tokens)} requiredMark={'optional'}> 
             <Form.Item name="textInput" label="Text Input" 
             rules={[{required: true}]} >
               <Input />
             </Form.Item>
-            <Form.Item name="token" label="Token" 
-            rules={[{required: true}]} >
-              <Input />
-            </Form.Item>
+            {!address ? (
+              <Form.Item name="token" label="Token" 
+              rules={[{required: true}]} >
+                <Input />
+              </Form.Item>
+            ) : (
+              <>
+                You have {tokens.length} tokens remaining for this address.
+              </>
+            )}
           </Form>
         </Modal>
       </Space>
@@ -377,6 +475,7 @@ function App(props) {
   const userProvider = useUserProvider(injectedProvider, localProvider);
   const address = useUserAddress(userProvider);
   
+  const [newReady, setNewReady] = useState(null)
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('newest')
 
@@ -390,40 +489,6 @@ function App(props) {
       loadWeb3Modal();
     }
   }, [loadWeb3Modal]);
-
-  const web3Modal = new Web3Modal({
-    // network: "mainnet", // optional
-    cacheProvider: true, // optional
-    providerOptions: {
-      walletconnect: {
-        package: WalletConnectProvider, // required
-        options: {
-          infuraId: INFURA_ID,
-        },
-      },
-    },
-  });
-
-  const logoutOfWeb3Modal = async () => {
-    await web3Modal.clearCachedProvider();
-    setTimeout(() => {
-      window.location.reload();
-    }, 1);
-  };
-
-  window.ethereum && window.ethereum.on('chainChanged', chainId => {
-    web3Modal.cachedProvider &&
-    setTimeout(() => {
-      window.location.reload();
-    }, 1);
-  })
-
-  window.ethereum && window.ethereum.on('accountsChanged', accounts => {
-    web3Modal.cachedProvider &&
-    setTimeout(() => {
-      window.location.reload();
-    }, 1);
-  })
 
   const isSigner = injectedProvider && injectedProvider.getSigner && injectedProvider.getSigner()._isSigner
 
@@ -462,22 +527,60 @@ function App(props) {
 
         <div id="toolbar">
           <div id="views">
-            <QueryBar address={address} onSortChange={(s) => setSort(s)} onFilterChange={(f) => setFilter(f)} />
+            <QueryBar address={address} isSigner={isSigner} 
+             onSortChange={(s) => setSort(s)} onFilterChange={(f) => setFilter(f)} 
+            />
           </div>
           <div id="createTool">
-            <CreationTool address={address} />
+            <CreationTool address={address} isSigner={isSigner} 
+             onNewReady={(t) => setNewReady(t)} 
+            />
           </div>
         </div>
 
       </div>
       
-      <Creations filter={filter} sort={sort}/>
+      <Creations filter={filter} sort={sort} newReady={newReady} />
       
       <ThemeSwitch />
 
     </div>
   );
 }
+
+const web3Modal = new Web3Modal({
+  // network: "mainnet", // optional
+  cacheProvider: true, // optional
+  providerOptions: {
+    walletconnect: {
+      package: WalletConnectProvider, // required
+      options: {
+        infuraId: INFURA_ID,
+      },
+    },
+  },
+});
+
+const logoutOfWeb3Modal = async () => {
+  await web3Modal.clearCachedProvider();
+  setTimeout(() => {
+    window.location.reload();
+  }, 1);
+};
+
+window.ethereum && window.ethereum.on('chainChanged', chainId => {
+  web3Modal.cachedProvider &&
+  setTimeout(() => {
+    window.location.reload();
+  }, 1);
+})
+
+window.ethereum && window.ethereum.on('accountsChanged', accounts => {
+  web3Modal.cachedProvider &&
+  setTimeout(() => {
+    window.location.reload();
+  }, 1);
+})
 
 
 function ProtectedRoute({ component: Component, ...restOfProps }) {
@@ -496,6 +599,7 @@ function ProtectedRoute({ component: Component, ...restOfProps }) {
     />
   );
 }
+
 
 function Home() {
   return (

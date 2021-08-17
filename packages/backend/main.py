@@ -52,7 +52,7 @@ if action == 'create':
     'height': 512,
     'num_octaves': 3,
     'octave_scale': 2.0,
-    'num_iterations': [3, 2, 2],
+    'num_iterations': [10, 5, 3],
     'weight_decay': 0.1,
     'learning_rate': 0.1,
     'lr_decay_after': 400,

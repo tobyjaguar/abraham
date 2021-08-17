@@ -8,15 +8,12 @@ var bodyParser = require("body-parser");
 var app = express();
 const MongoClient = require('mongodb').MongoClient
 const PythonShell = require('python-shell').PythonShell;
-const { debug } = require('console');
-
-
+const { debug, Console } = require('console');
+const { isError } = require('util');
 var ObjectId = require('mongodb').ObjectId;
 
 
-let cache = {}
-let currentMessage = "I am **ADDRESS** and I would like to sign in to YourDapp, plz!"
-let mongoUrl = 'mongodb://127.0.0.1:27018'
+let MONGOURL = 'mongodb://127.0.0.1:27018'
 
 app.use(cors())
 app.use(bodyParser.json());
@@ -40,7 +37,8 @@ function formatDate(date) {
   return `${date.getFullYear()}-${mm}-${dd} ${hh}:${MM}`;
 }
 
-MongoClient.connect(mongoUrl, { useNewUrlParser: true })
+
+MongoClient.connect(MONGOURL, { useNewUrlParser: true })
   .then(client => {
     
     const creations = client.db('creations').collection('creations3')
@@ -92,60 +90,87 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       await update_stats(req, res, 'burn')
     );
 
-    async function runStatusChecker(task_id, address) {
+    async function runStatusChecker(task_id, address, token) {
+
       let results = await checkTaskStatus(task_id)
       if (results['status'] == 'complete') {
         text_input = results['output']['config']['text_inputs'][0]['text']
         index = results['index']
-        console.log("the address is", address)
         creations.insertOne({
           'date': new Date(),
           'address': address,
           'text_input': text_input,
+          'task_id': task_id,
           'idx': index,
           'praise': 0,
           'burn': 0
         })
         .then(result => {
           const _id = result.insertedId;
+          //updateTokenStatus({token: token}, null);
         })
         .catch(error => console.error(error))
       } 
       else if (results['status'] == 'failed') {
-        pass;
+        updateTokenStatus({token: token}, null);
       }
       else {
         setTimeout(function() {
-          runStatusChecker(task_id, address);
+          runStatusChecker(task_id, address, token);
         }, 3000);
       }
     }
 
-    app.post('/request_creation', (req, res) => {
+    app.post('/request_creation', async (req, res) => {
       text_input = req.body['text_input']
       address = req.body['address']
-      let options = {
-        mode: 'text',
-        pythonPath: '/usr/local/bin/python3',
-        pythonOptions: ['-u'], 
-        scriptPath: '.',
-        args: ['create', text_input]
-      };
-      
-      PythonShell.run('main.py', options, function (err, results) {
-        if (err) {
-          results = {'status': 'failed', 'output': 'there was an error'}  
-          res.status(200).send(results);
-          console.log(err);
-          throw err;
-        } else {
-          let task_id = results.pop()
-          results = {'status': 'running', 'task_id': task_id}
-          setTimeout(function() {
-            runStatusChecker(task_id, address);
-          }, 5000);
-          res.status(200).send(results); 
+      token = req.body['token']
+
+      results = await getTokens({token: token}).then(results => {
+
+        if (results.length > 0) {  
+
+          let options = {
+            mode: 'text',
+            pythonPath: '/usr/local/bin/python3',
+            pythonOptions: ['-u'], 
+            scriptPath: '.',
+            args: ['create', text_input]
+          };
+
+          PythonShell.run('main.py', options, function (err, results) {
+
+            // something wrong in python script
+            if (err) {
+              results = {'status': 'failed', 'output': err}  
+              res.status(200).send(results);
+              throw err;
+            } 
+
+            // succeeded in running
+            else {              
+              let task_id = results.pop()
+              updateTokenStatus({token: token}, task_id);
+              results = {'status': 'running', 'task_id': task_id}
+              setTimeout(function() {
+                runStatusChecker(task_id, address, token);
+              }, 5000);
+              res.status(200).send(results); 
+            }
+          });
         }
+
+        // token not recognized
+        else {
+          results = {'status': 'failed', 'output': 'token not recognized'}  
+          res.status(200).send(results);
+        }
+
+      // something went wrong on get_tokens
+      }).catch(err => {
+        results = {'status': 'failed', 'output': err}  
+        res.status(200).send(results);
+        throw err;
       });
 
     });
@@ -156,10 +181,10 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       res.status(200).send(results); 
     });
 
-
     app.post('/get_creations', async (req, res) => {
       sort_by = req.body['sort_by']
       filter_by = req.body['filter_by']
+      filter_by_task = req.body['filter_by_task']
       skip = req.body['skip']
       limit = req.body['limit']
       format_date = req.body['format_date']
@@ -175,12 +200,18 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       if (filter_by !== 'all') {
         filter_query.address = filter_by
       }
-
+      if (filter_by_task) {
+        filter_query.task_id = filter_by_task
+      }
+      console.log(filter_query)
       creations.find(filter_query, sort_query)
         .skip(skip)
         .limit(limit)
         .toArray()
         .then(results => {
+          console.log("got me the results")
+          console.log(results)
+          console.log('----')
           if (format_date) {
             Object.keys(results).forEach(function(key){
               if (results[key].date) {
@@ -194,18 +225,51 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       }
     )
 
-    // TOKENS
-    app.post('/get_tokens', (req, res) => {
-      tokens.find({}).toArray().then(results => {
+    const getTokens = async function(filter) {
+      return new Promise(resolve => {
+        filter = filter ? filter : {}
+        tokens.find(filter).toArray().then(results => {
+          resolve(results)
+        }).catch(error => {
+          resolve(error);
+        });
+      });
+    }
+
+    const updateTokenStatus = async function(filter, status) {
+      
+      return new Promise(resolve => {
+        var newStatus = (status === null) ? {$unset: {status: 0}} : {$set: {status: status}};
+        console.log('new status')
+        console.log(newStatus)
+        tokens.updateOne(filter, newStatus).then(result => {
+          resolve(true);
+        })
+        .catch(error => {
+          console.error(error);
+          resolve(false);
+        });
+      });
+    }
+
+    app.post('/get_tokens', async (req, res) => {
+      filter = req.body['address'] ? {address: req.body['address']} : {} 
+      if (req.body['exclude_spent']) {
+        filter.status = {$in: [null, false]}
+      }
+      
+      results = await getTokens(filter).then(results => {
         Object.keys(results).forEach(function(key){
           if (results[key].date) {
             results[key].date = formatDate(results[key].date) 
           }
         });
         res.status(200).send(results); 
-      }).catch(error => console.error(error))
+      }).catch(error => {
+        res.status(500).send(error);         
+      });
     })
-
+    
     app.post('/add_tokens', async (req, res) => {
       amount = req.body['amount']
       note = req.body['note']
@@ -229,20 +293,6 @@ MongoClient.connect(mongoUrl, { useNewUrlParser: true })
       }
       res.status(200).send({'result': success?'success':'fail'});       
     })
-
-
-    
-  
-
-
-
-
-
-
-
-
-
-
 
 
     if (fs.existsSync('server.key') && fs.existsSync('server.cert')){
