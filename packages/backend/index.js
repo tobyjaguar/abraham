@@ -41,8 +41,8 @@ function formatDate(date) {
 MongoClient.connect(MONGOURL, { useNewUrlParser: true })
   .then(client => {
     
-    const creations = client.db('creations').collection('creations3')
-    const tokens = client.db('creations').collection('tokens3')
+    const creations = client.db('creations').collection('creations4')
+    const tokens = client.db('creations').collection('tokens4')
 
     function checkTaskStatus(task_id) {
 
@@ -94,7 +94,7 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
 
       let results = await checkTaskStatus(task_id)
       if (results['status'] == 'complete') {
-        text_input = results['output']['config']['text_inputs'][0]['text']
+        text_input = results['output']['config']['text_input']
         index = results['index']
         creations.insertOne({
           'date': new Date(),
@@ -209,9 +209,6 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
         .limit(limit)
         .toArray()
         .then(results => {
-          console.log("got me the results")
-          console.log(results)
-          console.log('----')
           if (format_date) {
             Object.keys(results).forEach(function(key){
               if (results[key].date) {
@@ -240,8 +237,6 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       
       return new Promise(resolve => {
         var newStatus = (status === null) ? {$unset: {status: 0}} : {$set: {status: status}};
-        console.log('new status')
-        console.log(newStatus)
         tokens.updateOne(filter, newStatus).then(result => {
           resolve(true);
         })
@@ -276,12 +271,14 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       address = req.body['address']
       address = address ? address : null;
       let success = true;
+      let newTokens = [];
       for (var i=0; i<amount; i++) {
+        var newToken = randomString(8);
         tokens.insertOne({
           'date': new Date(),
           'note': note,
           'address': address,
-          'token': randomString(8)
+          'token': newToken
         })
         .then(result => {
           const _id = result.insertedId;          
@@ -289,9 +286,12 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
         .catch(error => {
           console.error(error);
           success = false;
-        });  
+        });
+        if (success) {
+          newTokens.push(newToken)
+        }
       }
-      res.status(200).send({'result': success?'success':'fail'});       
+      res.status(200).send({'result': success?'success':'fail', 'newTokens': newTokens});       
     })
 
 

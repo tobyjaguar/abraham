@@ -42,26 +42,20 @@ def save_output(response):
 if action == 'create':
   client = Client(url = CLIENT_URL, username='abraham', timeout= 990000, verify_ssl=False)
   text_input = sys.argv[2]
+
   config = {
     'model_name': 'imagenet', 
-    'text_inputs': [{
-      'text': text_input,
-      'weight': 10.0
-    }],
-    'width': 512,
-    'height': 512,
+    'clip_model': 'ViT-B/32',
+    'text_input': text_input,
+    'width': 800,
+    'height': 600,
     'num_octaves': 3,
     'octave_scale': 2.0,
-    'num_iterations': [10, 5, 3],
-    'weight_decay': 0.1,
-    'learning_rate': 0.1,
-    'lr_decay_after': 400,
-    'lr_decay_rate': 0.995
+    'num_iterations': [200, 300, 300]
   }
   response = client.run(config)
   task_id = response['token']
   print(task_id)
-  #print("WILL I SEE IT??")
 
 elif action == 'fetch':
   client = Client(url = CLIENT_URL, username='abraham', timeout= 990000, verify_ssl=False)

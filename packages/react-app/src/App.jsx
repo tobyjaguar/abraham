@@ -3,7 +3,7 @@ import { BrowserRouter, Switch, Route, Redirect, Link } from "react-router-dom";
 import "antd/dist/antd.css";
 import {  StaticJsonRpcProvider, JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import "./App.css";
-import { message, Row, Col, Button, Modal, Form, Progress, Input, Radio, Space, Divider, DemoBox, Menu, Alert, Switch as SwitchD } from "antd";
+import { message, notification, Image, Row, Col, Button, Modal, Form, Progress, Input, Radio, Space, Divider, DemoBox, Menu, Alert, Switch as SwitchD } from "antd";
 import Admin from './Admin';
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -26,32 +26,6 @@ const localProviderUrl = targetNetwork.rpcUrl;
 const localProviderUrlFromEnv = process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : localProviderUrl;
 const localProvider = new StaticJsonRpcProvider(localProviderUrlFromEnv);
 const blockExplorer = targetNetwork.blockExplorer; 
-
-
-/*
-admin
- - three sections
- - highlight active
- - get eden_clip info
- - automatic updates
-
-features
- - error handling
- - eden.js + image_to_db
- - praise/burn limits
- - modal view whole image
-
-minor bugs
- x display all/new
- x keep checking, update
- - {created by}
- x update {token count}
- x close creation status
-
-deploy
- - static pages (splash3)
- - gospel
-*/
 
 
 
@@ -89,6 +63,8 @@ const darkBlue = '#14133a';
 
 
 
+
+
 /// ============= CREATION ============= ///
 
 function Creation(props) {
@@ -103,6 +79,10 @@ function Creation(props) {
     setPraises(results.data.praise);
   }  
 
+  function filterByCreator() {
+    props.onFilterChange(props.item.address);
+  }  
+
   async function burn() {
     const results = await axios.post(serverUrl+'burn', {
       creation_id: props.item._id
@@ -110,18 +90,27 @@ function Creation(props) {
     setBurns(results.data.burn);
   }  
 
+  const imgPath = "results/"+padLeadingZeros(props.item.idx, 4)+"/image.jpg";
+
   return (
     <div className="creation" >
       <div className="cr_text" >
-        {props.item.text_input }
+        {props.item.text_input}
       </div>
       <div className="cr_img" >
-        <img src={"results/"+padLeadingZeros(props.item.idx, 4)+"/image.jpg"} ></img>
+        <Image alt={props.item.text_input} src={imgPath}/>
       </div>
       <div className="cr_status" >
-        {/* Created by: {shortenAddress(props.item.address, 4)} */}
-        <span onClick={praise} className="cr_praise">🙌 {praises}</span>
-        <span onClick={burn} className="cr_burn">🔥 {burns}</span>
+        {props.item.address == 0 ? '' : (
+          <div onClick={filterByCreator} className="cr_creator">
+            ✍️ {shortenAddress(props.item.address, 4)}
+          </div>
+        )}
+        <div className="cr_praiseburn">
+          <span onClick={praise} className="cr_praise">🙌</span> {praises}
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <span onClick={burn} className="cr_burn">🔥</span> {burns}
+        </div>
       </div>
     </div>
   );
@@ -149,7 +138,6 @@ class Creations extends React.Component {
       this.setState({ creations: [], page: 0, prevY: 0});
       this.getCreations(this.state.page);        
     } else if (prevProps.newReady !== this.props.newReady) {
-      console.log("new ready "+this.props.newReady);
       axios({
         method: 'post',
         url: serverUrl+'get_creations',
@@ -174,8 +162,6 @@ class Creations extends React.Component {
         limit: 16
       }
     }).then(res => {
-      console.log('got res')
-      console.log(res.data)
       this.setState({ creations: [...this.state.creations, ...res.data] });
       this.setState({ loading: false });
     });
@@ -211,7 +197,7 @@ class Creations extends React.Component {
     this.state.creations.map(item => 
       cols.push(
         <Col key={item._id} span={24 / colCount} >
-          <Creation item={item} />
+          <Creation item={item} onFilterChange={this.props.onFilterChange} />
         </Col>
       )
     )
@@ -255,12 +241,16 @@ function QueryBar(props) {
 
   return (
     <Space>
-      <div style={{display: filterVisible?'block':'none'}}>
       <Radio.Group defaultValue="all" size="large" buttonStyle="solid" onChange={changeFilter}>
+        <div style={{display: filterVisible?'block':'none'}}>
         <Radio.Button value="all">All creations</Radio.Button>
         <Radio.Button value={props.address}>My creations</Radio.Button>
+        </div>
+        <div style={{display: !filterVisible && props.filter != 'all'?'block':'none'}}>
+        <Radio.Button value="all2">All creations</Radio.Button>
+        </div>
       </Radio.Group>
-      </div>
+      
       <Radio.Group defaultValue="newest" size="large"  buttonStyle="solid" onChange={changeSort}>
         <Radio.Button value="newest">Newest</Radio.Button>
         <Radio.Button value="praise">🙌</Radio.Button>
@@ -284,18 +274,22 @@ function CreationTool(props) {
 
   const [visibleT, setVisibleT] = useState(false);
   const [visibleS, setVisibleS] = useState(false);
+  const [visibleI, setVisibleI] = useState(false);
   const [visibleSB, setVisibleSB] = useState(false);
 
   const showModalT = () => {setVisibleT(true)};
   const hideModalT = () => {setVisibleT(false)};
   const showModalS = () => {setVisibleS(true)};
   const hideModalS = () => {setVisibleS(false)};
+  const showModalI = () => {setVisibleI(true)};
+  const hideModalI = () => {setVisibleI(false)};
   const showButtonSB = () => {setVisibleSB(true)};
   const hideButtonSB = () => {setVisibleSB(true)};
 
+  const goToDiscord = () => {window.location='https://discord.gg/4dSYwDT'};
+
   const updateAddress = async (props) => {
     if (props.isSigner) {
-      console.log('lets look?')
       const results = await axios.post(serverUrl+'get_tokens', {
         address: props.address,
         exclude_spent: true
@@ -327,10 +321,9 @@ function CreationTool(props) {
     }
     if (results.data.status == 'complete') {
       message.info('Creation "'+textInput+'" succeeded :)');
-      console.log("go!")
       setTimeout(function() {
         props.onNewReady(taskId)
-      }, 1000); 
+      }, 2500); 
     } else if (results.data.status == 'failed') {
       message.error('Creation "'+textInput+'" failed :(');
     } else if (results.data.status == 'queued') {
@@ -344,6 +337,12 @@ function CreationTool(props) {
     }
   }
 
+  const requestTokens = () => {
+    setVisibleT(false);
+    setConfirmLoading(false);
+    showModalI();
+  };
+
   const onSubmit = useCallback(async (values, address, tokens) => {
     setConfirmLoading(true);
     let textInput = values.textInput;
@@ -353,7 +352,7 @@ function CreationTool(props) {
       var token = values.token;
     }
     const results = await axios.post(serverUrl+'request_creation', {
-      address: address,
+      address: props.isSigner ? address : 0,
       text_input: textInput,
       token: token
     })
@@ -362,7 +361,7 @@ function CreationTool(props) {
       let reason = token === null ? 'No tokens left' : results.data.output;
       message.error('Error creating "'+textInput+'": '+reason);
     } else if (status == 'queued') {
-      message.info('Creation "'+textInput+'" queued');
+      message.info('Creation "'+textInput+'" is in Abraham\'s queue');
       let taskId = results.data.task_id;  
       setTimeout(function() {
         runStatusChecker(taskId, textInput);
@@ -380,8 +379,8 @@ function CreationTool(props) {
         tokens.splice(tokenIdx,1);
       }
       setTokens(tokens);
-    }
-    setVisibleT(false);
+      setVisibleT(false);
+    }    
     setConfirmLoading(false);
   }, []);
 
@@ -411,6 +410,22 @@ function CreationTool(props) {
           <Progress className="progress-circle" strokeColor={'#333254'} type="circle" width={30} percent={creationsProgress} />
         </Button>}
         <Modal
+          title="How to get tokens for Abraham"
+          visible={visibleI}
+          onOk={hideModalI}
+          onCancel={hideModalI}
+          footer={[
+            <Button key="discord" type="primary" onClick={goToDiscord}>
+              Go to Abraham Discord
+            </Button>,
+            <Button key="submit" type="primary" onClick={hideModalI}>
+              Amen
+            </Button>
+          ]}
+        >
+          For now, please request tokens from Gene or Mayukh on the Abraham Discord or Twitter. We're currently designing a better system. Please note the tokens are fake. One day, we hope they will be real.
+        </Modal>
+        <Modal
           title="New Creations"
           visible={visibleS}
           onOk={hideModalS}
@@ -437,8 +452,9 @@ function CreationTool(props) {
           onCancel={closePopup}
           confirmLoading={confirmLoading}
           footer={[
-            <Button key="submit" type="primary" loading={confirmLoading} onClick={form.submit}>
-              Create
+            <Button key="submit" type="primary" loading={confirmLoading}
+             onClick={tokens.length==0 && props.isSigner ? requestTokens : form.submit}>
+              {tokens.length == 0 && props.isSigner ? 'How can I get tokens?' : 'Create' }
             </Button>
           ]}
         >
@@ -448,10 +464,12 @@ function CreationTool(props) {
               <Input />
             </Form.Item>
             {!address ? (
+              <>
               <Form.Item name="token" label="Token" 
               rules={[{required: true}]} >
                 <Input />
               </Form.Item>
+              </>
             ) : (
               <>
                 You have {tokens.length} tokens remaining for this address.
@@ -527,8 +545,8 @@ function App(props) {
 
         <div id="toolbar">
           <div id="views">
-            <QueryBar address={address} isSigner={isSigner} 
-             onSortChange={(s) => setSort(s)} onFilterChange={(f) => setFilter(f)} 
+            <QueryBar address={address} isSigner={isSigner} filter={filter} 
+             onSortChange={(s) => setSort(s)} onFilterChange={(f) => setFilter(f=='all2'?'all':f)} 
             />
           </div>
           <div id="createTool">
@@ -540,7 +558,7 @@ function App(props) {
 
       </div>
       
-      <Creations filter={filter} sort={sort} newReady={newReady} />
+      <Creations filter={filter} sort={sort} newReady={newReady} onFilterChange={(f) => setFilter(f)}/>
       
       <ThemeSwitch />
 
@@ -604,7 +622,7 @@ function ProtectedRoute({ component: Component, ...restOfProps }) {
 function Home() {
   return (
     <BrowserRouter>
-      <Route path="/" exact component={() => <App />} />
+      <Route path="/create" exact component={() => <App />} />
       <ProtectedRoute path="/admin" exact component={Admin} />
     </BrowserRouter>
   );

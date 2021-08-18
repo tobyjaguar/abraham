@@ -5,17 +5,22 @@
 
 #results {
   /* margin-top: 10px; */
+  width: 100%;
+  max-width: 2200px;
+  margin-top:20px;
+  padding: 1%;
 }
 .creation {
   display: inline-block;
   /* margin: 15px; */
   /* padding: 5px; */
+  padding: 1%;
   /* width: 542px; */
-  width: 100%;
+  /* width: 100%; */
   border: 1px solid #ddd ;
 }
 .cr_img img {
-  width: 95%;
+  width: 100%;
 }
 
 .cr_text{
@@ -25,9 +30,28 @@
 }
 
 .cr_status{
-  /* padding: 5px; */
+  padding: 1%;
+  padding-left: 3%;
   /* padding-bottom: 10px; */
-  font-size: 2.0em;
+  padding-right: 3%;
+}
+
+.cr_creator {
+  font-size: 1.4em;
+  float: right;
+}
+.cr_creator:hover {
+  cursor: pointer;
+}
+.cr_praiseburn {
+  font-size: 1.65em;
+  float: left;
+}
+.cr_praise:hover, .cr_burn:hover {
+  cursor: pointer;
+}
+.cr_img img:hover {
+  cursor: pointer;
 }
 
 
@@ -87,9 +111,6 @@
   padding: 15px;
 }
 
-#results {
-  margin:1%;
-}
 
 #topbar {
   /* background-color: #ff0;; */
