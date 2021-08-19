@@ -427,7 +427,7 @@ function CreationTool(props) {
             </Button>
           ]}
         >
-          For now, please request tokens from Gene or Mayukh on the Abraham Discord or Twitter. We're currently designing a better system. Please note the tokens are fake. One day, we hope they will be real.
+          For now, please request tokens from Gene or Mayukh on the Abraham Discord or Twitter. We're currently designing a better system. Please note the tokens are fake. One day, we hope they will be real. 🙌
         </Modal>
         <Modal
           title="New Creations"
@@ -473,6 +473,7 @@ function CreationTool(props) {
               rules={[{required: true}]} >
                 <Input />
               </Form.Item>
+              <span style={{cursor: 'pointer'}} onClick={requestTokens}>How can I get tokens?</span>
               </>
             ) : (
               <>
