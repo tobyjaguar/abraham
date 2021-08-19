@@ -7,8 +7,9 @@ require('dotenv').config()
 
 const axios = require('axios');
 const serverUrl = process.env.REACT_APP_SERVER_URL;
+const serverPassword = process.env.REACT_APP_SERVER_PASSWORD;
 
-
+  
 
 class AllCreations extends React.Component {
   constructor(props) {
@@ -49,6 +50,7 @@ class AllCreations extends React.Component {
       method: 'post',
       url: serverUrl+'get_creations',
       data: {
+        password: serverPassword,
         sort_by: 'newest', 
         filter_by: filterAddress ? filterAddress : 'all', 
         skip: 0, limit: 1000000, 
@@ -91,6 +93,7 @@ function AddTokenTool(props) {
 
   const onSubmit = useCallback(async (values) => {
     const results = await axios.post(serverUrl+'add_tokens', {
+      password: serverPassword,
       amount: values.amount,
       address: values.address,
       note: values.note
@@ -179,7 +182,10 @@ class AllTokens extends React.Component {
     this.setState({loading: true});
     axios({
       method: 'post',
-      url: serverUrl+'get_tokens'
+      url: serverUrl+'get_tokens',
+      data: {
+        password: serverPassword
+      }
     }).then(res => {
       Object.keys(res.data).forEach(function(key){
         res.data[key]['key'] = res.data[key]['_id']

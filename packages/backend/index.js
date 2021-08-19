@@ -11,9 +11,9 @@ const PythonShell = require('python-shell').PythonShell;
 const { debug, Console } = require('console');
 const { isError } = require('util');
 var ObjectId = require('mongodb').ObjectId;
+var md5 = require('blueimp-md5')
+require('dotenv').config()
 
-
-let MONGOURL = 'mongodb://127.0.0.1:27017'
 
 app.use(cors())
 app.use(bodyParser.json());
@@ -38,15 +38,27 @@ function formatDate(date) {
 }
 
 
-MongoClient.connect(MONGOURL, { useNewUrlParser: true })
+function authenticate(password) {
+  return md5(password) == process.env.BACKEND_PASSWORD_HASH;
+}
+
+
+MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
   .then(client => {
     
-    const creations = client.db('abraham').collection('creations')
-    const tokens = client.db('abraham').collection('tokens')
+    const creations = client.db(process.env.DB_NAME).collection('creations')
+    const tokens = client.db(process.env.DB_NAME).collection('tokens')
 
-    function checkTaskStatus(task_id) {
+    function checkTaskStatus(task_id, password) {
 
       return new Promise((resolve, reject) => {
+
+        let authorized = authenticate(password);
+        if (!authorized) {
+          console.log('Error: not authorized');
+          resolve(false);
+        }
+  
         let options = {
           mode: 'text',
           pythonPath: 'python3',
@@ -67,7 +79,15 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       })
     }
     
-    async function update_stats(req, res, type) {
+    async function update_stats(req, res, type, password) {
+
+      let authorized = authenticate(req.body['password']);
+      
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
+
       creation_id = req.body['creation_id']
       creations.updateOne(
         {_id: ObjectId(creation_id)}, 
@@ -90,9 +110,9 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       await update_stats(req, res, 'burn')
     );
 
-    async function runStatusChecker(task_id, address, token) {
+    async function runStatusChecker(task_id, address, token, password) {
 
-      let results = await checkTaskStatus(task_id)
+      let results = await checkTaskStatus(task_id, password)
       if (results['status'] == 'complete') {
         text_input = results['output']['config']['text_input']
         index = results['index']
@@ -107,16 +127,16 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
         })
         .then(result => {
           const _id = result.insertedId;
-          //updateTokenStatus({token: token}, null);
+          //updateTokenStatus({token: token}, null, password);
         })
         .catch(error => console.error(error))
       } 
       else if (results['status'] == 'failed') {
-        updateTokenStatus({token: token}, null);
+        updateTokenStatus({token: token}, null, password);
       }
       else {
         setTimeout(function() {
-          runStatusChecker(task_id, address, token);
+          runStatusChecker(task_id, address, token, password);
         }, 3000);
       }
     }
@@ -125,8 +145,15 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       text_input = req.body['text_input']
       address = req.body['address']
       token = req.body['token']
+      password = req.body['password'];
 
-      results = await getTokens({token: token}).then(results => {
+      let authorized = authenticate(password);
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
+
+      results = await getTokens({token: token}, password).then(results => {
 
         if (results.length > 0) {  
 
@@ -148,12 +175,12 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
             } 
 
             // succeeded in running
-            else {              
+            else {         
               let task_id = results.pop()
-              updateTokenStatus({token: token}, task_id);
+              updateTokenStatus({token: token}, task_id, password);
               results = {'status': 'running', 'task_id': task_id}
               setTimeout(function() {
-                runStatusChecker(task_id, address, token);
+                runStatusChecker(task_id, address, token, password);
               }, 5000);
               res.status(200).send(results); 
             }
@@ -176,12 +203,24 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
     });
     
     app.post('/backend/get_status', async (req, res) => {
+      let authorized = authenticate(req.body['password']);
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
       task_id = req.body['task_id']
-      let results = await checkTaskStatus(task_id)
+      let results = await checkTaskStatus(task_id, req.body['password'])
       res.status(200).send(results); 
     });
 
     app.post('/backend/get_creations', async (req, res) => {
+
+      let authorized = authenticate(req.body['password']);
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
+
       sort_by = req.body['sort_by']
       filter_by = req.body['filter_by']
       filter_by_task = req.body['filter_by_task']
@@ -221,8 +260,16 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       }
     )
 
-    const getTokens = async function(filter) {
+    const getTokens = async function(filter, password) {
       return new Promise(resolve => {
+
+        let authorized = authenticate(password);
+        if (!authorized) {
+          console.log("Error: not authorized");
+          resolve(false);
+          return;
+        }
+  
         filter = filter ? filter : {}
         tokens.find(filter).toArray().then(results => {
           resolve(results)
@@ -232,9 +279,16 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       });
     }
 
-    const updateTokenStatus = async function(filter, status) {
+    const updateTokenStatus = async function(filter, status, password) {
       
       return new Promise(resolve => {
+        let authorized = authenticate(password);
+        if (!authorized) {
+          console.log("Error: not authorized")
+          resolve(false);
+          return;
+        }
+
         var newStatus = (status === null) ? {$unset: {status: 0}} : {$set: {status: status}};
         tokens.updateOne(filter, newStatus).then(result => {
           resolve(true);
@@ -246,13 +300,21 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       });
     }
 
+
     app.post('/backend/get_tokens', async (req, res) => {
+
+      let authorized = authenticate(req.body['password']);
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
+
       filter = req.body['address'] ? {address: req.body['address']} : {} 
       if (req.body['exclude_spent']) {
         filter.status = {$in: [null, false]}
       }
       
-      results = await getTokens(filter).then(results => {
+      results = await getTokens(filter, req.body['password']).then(results => {
         Object.keys(results).forEach(function(key){
           if (results[key].date) {
             results[key].date = formatDate(results[key].date) 
@@ -269,7 +331,15 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       res.status(200).send('this is not what you are looking for'); 
     });
     
+    
     app.post('/backend/add_tokens', async (req, res) => {
+
+      let authorized = authenticate(req.body['password']);
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
+
       amount = req.body['amount']
       note = req.body['note']
       address = req.body['address']

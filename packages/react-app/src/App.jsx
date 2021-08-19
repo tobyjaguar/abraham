@@ -17,10 +17,10 @@ import { ConsoleSqlOutlined, PropertySafetyOutlined } from "@ant-design/icons";
 require('dotenv').config()
 
 
-
 const axios = require('axios');
 
 const serverUrl = process.env.REACT_APP_SERVER_URL;
+const serverPassword = process.env.REACT_APP_SERVER_PASSWORD;
 const targetNetwork = NETWORKS['mainnet']; 
 
 const scaffoldEthProvider = new StaticJsonRpcProvider("https://rpc.scaffoldeth.io:48544")
@@ -70,6 +70,7 @@ function Creation(props) {
 
   async function praise() {
     const results = await axios.post(serverUrl+'praise', {
+      password: serverPassword,
       creation_id: props.item._id
     });
     setPraises(results.data.praise);
@@ -81,6 +82,7 @@ function Creation(props) {
 
   async function burn() {
     const results = await axios.post(serverUrl+'burn', {
+      password: serverPassword,
       creation_id: props.item._id
     });
     setBurns(results.data.burn);
@@ -138,6 +140,7 @@ class Creations extends React.Component {
         method: 'post',
         url: serverUrl+'get_creations',
         data: {
+          password: serverPassword,
           filter_by: 'all', filter_by_task: this.props.newReady, skip: 0, limit: 1
         }
       }).then(res => {
@@ -152,6 +155,7 @@ class Creations extends React.Component {
       method: 'post',
       url: serverUrl+'get_creations',
       data: {
+        password: serverPassword,
         sort_by: this.props.sort,
         filter_by: this.props.filter,
         skip: (page > 0) ? 16 * page : 0,
@@ -287,6 +291,7 @@ function CreationTool(props) {
   const updateAddress = async (props) => {
     if (props.isSigner) {
       const results = await axios.post(serverUrl+'get_tokens', {
+        password: serverPassword,
         address: props.address,
         exclude_spent: true
       });
@@ -306,6 +311,7 @@ function CreationTool(props) {
 
   const runStatusChecker = async (taskId, textInput) => {
     const results = await axios.post(serverUrl+'get_status', {
+      password: serverPassword,
       task_id: taskId
     });
     creations[taskId] = results.data;
@@ -347,7 +353,9 @@ function CreationTool(props) {
     } else {
       var token = values.token;
     }
+    console.log('the server pass', serverPassword)
     const results = await axios.post(serverUrl+'request_creation', {
+      password: serverPassword,
       address: props.isSigner ? address : 0,
       text_input: textInput,
       token: token
