@@ -16,8 +16,11 @@ import { INFURA_ID, DAI_ADDRESS, DAI_ABI, NETWORK, NETWORKS } from "./constants"
 import { ConsoleSqlOutlined, PropertySafetyOutlined } from "@ant-design/icons";
 require('dotenv').config()
 
+
+
 const axios = require('axios');
-const serverUrl = "http://localhost:49832/"
+
+const serverUrl = process.env.REACT_APP_SERVER_URL;
 const targetNetwork = NETWORKS['mainnet']; 
 
 const scaffoldEthProvider = new StaticJsonRpcProvider("https://rpc.scaffoldeth.io:48544")
@@ -57,13 +60,6 @@ function calcTotalProgress(obj) {
   }
 }
     
-const lightBlue = '#8c8c9f';
-const midBlue = '#333254';
-const darkBlue = '#14133a';
-
-
-
-
 
 /// ============= CREATION ============= ///
 

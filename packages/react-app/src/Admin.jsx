@@ -3,13 +3,10 @@ import {LogoutOutlined, CheckCircleOutlined} from '@ant-design/icons';
 import "antd/dist/antd.css";
 import { message, notification, Row, Col, Button, Modal, Form, Progress, Input, Radio, Space, Divider, DemoBox, Layout, Menu, Breadcrumb, Table, Alert, Switch as SwitchD } from "antd";
 import "./App.css";
-const lightBlue = '#8c8c9f';
-const midBlue = '#333254';
-const darkBlue = '#14133a';
+require('dotenv').config()
 
 const axios = require('axios');
-const serverUrl = "http://localhost:49832/"
-
+const serverUrl = process.env.REACT_APP_SERVER_URL;
 
 
 

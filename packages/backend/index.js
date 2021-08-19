@@ -13,7 +13,7 @@ const { isError } = require('util');
 var ObjectId = require('mongodb').ObjectId;
 
 
-let MONGOURL = 'mongodb://127.0.0.1:27018'
+let MONGOURL = 'mongodb://127.0.0.1:27017'
 
 app.use(cors())
 app.use(bodyParser.json());
@@ -41,15 +41,15 @@ function formatDate(date) {
 MongoClient.connect(MONGOURL, { useNewUrlParser: true })
   .then(client => {
     
-    const creations = client.db('creations').collection('creations4')
-    const tokens = client.db('creations').collection('tokens4')
+    const creations = client.db('abraham').collection('creations')
+    const tokens = client.db('abraham').collection('tokens')
 
     function checkTaskStatus(task_id) {
 
       return new Promise((resolve, reject) => {
         let options = {
           mode: 'text',
-          pythonPath: '/usr/local/bin/python3',
+          pythonPath: 'python3',
           pythonOptions: ['-u'], 
           scriptPath: '.',
           args: ['fetch', task_id]
@@ -82,11 +82,11 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       .catch(error => console.error(error))
     }
 
-    app.post('/praise', async (req, res) => 
+    app.post('/backend/praise', async (req, res) => 
       await update_stats(req, res, 'praise')
     );
 
-    app.post('/burn', async (req, res) => 
+    app.post('/backend/burn', async (req, res) => 
       await update_stats(req, res, 'burn')
     );
 
@@ -121,7 +121,7 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       }
     }
 
-    app.post('/request_creation', async (req, res) => {
+    app.post('/backend/request_creation', async (req, res) => {
       text_input = req.body['text_input']
       address = req.body['address']
       token = req.body['token']
@@ -132,7 +132,7 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
 
           let options = {
             mode: 'text',
-            pythonPath: '/usr/local/bin/python3',
+            pythonPath: 'python3',
             pythonOptions: ['-u'], 
             scriptPath: '.',
             args: ['create', text_input]
@@ -175,13 +175,13 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
 
     });
     
-    app.post('/get_status', async (req, res) => {
+    app.post('/backend/get_status', async (req, res) => {
       task_id = req.body['task_id']
       let results = await checkTaskStatus(task_id)
       res.status(200).send(results); 
     });
 
-    app.post('/get_creations', async (req, res) => {
+    app.post('/backend/get_creations', async (req, res) => {
       sort_by = req.body['sort_by']
       filter_by = req.body['filter_by']
       filter_by_task = req.body['filter_by_task']
@@ -203,7 +203,6 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       if (filter_by_task) {
         filter_query.task_id = filter_by_task
       }
-      console.log(filter_query)
       creations.find(filter_query, sort_query)
         .skip(skip)
         .limit(limit)
@@ -247,7 +246,7 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       });
     }
 
-    app.post('/get_tokens', async (req, res) => {
+    app.post('/backend/get_tokens', async (req, res) => {
       filter = req.body['address'] ? {address: req.body['address']} : {} 
       if (req.body['exclude_spent']) {
         filter.status = {$in: [null, false]}
@@ -265,7 +264,12 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       });
     })
     
-    app.post('/add_tokens', async (req, res) => {
+
+    app.get('/backend', (req, res) => {
+      res.status(200).send('this is not what you are looking for'); 
+    });
+    
+    app.post('/backend/add_tokens', async (req, res) => {
       amount = req.body['amount']
       note = req.body['note']
       address = req.body['address']
@@ -294,23 +298,9 @@ MongoClient.connect(MONGOURL, { useNewUrlParser: true })
       res.status(200).send({'result': success?'success':'fail', 'newTokens': newTokens});       
     })
 
-
-    if (fs.existsSync('server.key') && fs.existsSync('server.cert')){
-      https.createServer({
-        key: fs.readFileSync('server.key'),
-        cert: fs.readFileSync('server.cert')
-      }, app).listen(49832, () => {
-        console.log('HTTPS Listening: 49832')
-      })
-    } else {
-      var server = app.listen(49832, function () {
-        console.log("HTTP Listening on port:", server.address().port);
-      });
-    }     
+    var server = app.listen(49832, function () {
+      console.log("HTTP Listening on port:", server.address().port);
+    });
+         
   }).catch(error => console.error(error))
-
-
-
-
-
 
