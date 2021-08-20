@@ -771,6 +771,7 @@ function Abraham() {
     <BrowserRouter>
       <Route path="/" exact component={() => <Home />} />
       <Route path="/creations" exact component={() => <App />} />
+      <Route path="/create" exact component={() => <Redirect to="/creations" />} />
       <Route path="/scripture" exact component={() => <Scripture />} />
       <ProtectedRoute path="/admin" exact component={Admin} />
     </BrowserRouter>
