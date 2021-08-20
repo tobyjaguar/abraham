@@ -633,7 +633,7 @@ function Home() {
 
             
       <div id="abe">
-        <video playsinline autoplay muted loop >
+        <video playsinline autoPlay loop muted >
           <source src="images/abraham.mp4" type="video/mp4" />
         </video>
       </div>
