@@ -15,6 +15,7 @@ var md5 = require('blueimp-md5')
 require('dotenv').config()
 
 
+
 app.use(cors())
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -259,6 +260,26 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
         .catch(error => console.error(error))
       }
     )
+
+    app.post('/backend/delete_creation', async (req, res) => {
+
+      let authorized = authenticate(req.body['password']);
+      if (!authorized) {
+        res.status(500).send('Error: not authorized');
+        return;
+      }
+      key = req.body['key']
+      var success = true;
+      creations.remove({_id: ObjectId(key)})
+      .then(result => {
+        console.log('deleted')
+      })
+      .catch(error => {
+        console.error(error);
+        success = false;
+      });
+      res.status(200).send({'result': success?'success':'fail'});       
+    })
 
     const getTokens = async function(filter, password) {
       return new Promise(resolve => {
