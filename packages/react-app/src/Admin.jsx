@@ -10,6 +10,10 @@ const serverUrl = process.env.REACT_APP_SERVER_URL;
 const serverPassword = process.env.REACT_APP_SERVER_PASSWORD;
 
   
+function shortenAddress(address, size) {
+  return address.substring(0, 8); //slice(address.length - size);
+}
+
 
 class AllCreations extends React.Component {
   constructor(props) {
@@ -22,13 +26,21 @@ class AllCreations extends React.Component {
   }
 
   columns = [
-    {title: 'Date created', dataIndex: 'date', width: 10, sorter: {compare: (a, b) => a.date.localeCompare(b.date)}},
-    {title: 'Address', dataIndex: 'address', width: 20, sorter: {compare: (a, b) => a.address.localeCompare(b.address)}, render: text => <a data-id={text} onClick={this.onClick}>{text}</a>},
-    {title: 'Text Input', dataIndex: 'text_input', width: 32, render: text_input => <a data-id={text_input} onClick={this.onTextInputClick}>{text_input}</a>},
-    {title: 'Eden ID', dataIndex: 'task_id', width: 20},    
-    {title: 'Praise', dataIndex: 'praise', width: 7, sorter: {compare: (a, b) => a.praise - b.praise}},
-    {title: 'Burn', dataIndex: 'burn', width: 7, sorter: {compare: (a, b) => a.burn - b.burn}},
+    {title: 'Date created', dataIndex: 'date', width: 20, sorter: {compare: (a, b) => a.date.localeCompare(b.date)}},
+    {title: 'Address', dataIndex: 'address', width: 30, sorter: {compare: (a, b) => a.address.localeCompare(b.address)}, render: text => <a data-id={text} onClick={this.onClick}>{shortenAddress(String(text), 10)}...</a>},
+    {title: 'Text Input', dataIndex: 'text_input', width: 60, render: text_input => <a data-id={text_input} onClick={this.onTextInputClick}>{text_input}</a>},
+    {title: 'Eden ID', dataIndex: 'task_id', width: 40},    
+    {title: 'Praise', dataIndex: 'praise', width: 20, sorter: {compare: (a, b) => a.praise - b.praise}},
+    {title: 'Burn', dataIndex: 'burn', width: 20, sorter: {compare: (a, b) => a.burn - b.burn}},
+    {title: 'Delete', width: 24, render: (text, record) => <a data-id={record.key} onClick={this.onDelete}>delete</a>},
   ];
+
+  onDelete = async (e) => {
+    const results = await axios.post(serverUrl+'delete_creation', {
+      password: serverPassword,
+      key: e.currentTarget.dataset.id
+    })
+  }
 
   onTextInputClick = (e) => {
     console.log(e.currentTarget.dataset.id);
@@ -59,6 +71,7 @@ class AllCreations extends React.Component {
     }).then(res => {
       Object.keys(res.data).forEach(function(key){
         res.data[key]['key'] = res.data[key]['_id']
+        res.data[key]['myId'] = 99
       });
       this.setState({creations: res.data});
       this.setState({loading: false});
@@ -100,9 +113,6 @@ function AddTokenTool(props) {
     })
     let newTokens = results.data.newTokens;
     setVisible(false);
-    console.log('got')
-    console.log(results.data)
-    console.log(newTokens)
     openNotificationWithIcon('success', newTokens);
   }, []);
 
@@ -167,7 +177,7 @@ class AllTokens extends React.Component {
   columns = [
     {title: 'Date granted', dataIndex: 'date', sorter: {compare: (a, b) => a.date.localeCompare(b.date)}},
     {title: 'Note', dataIndex: 'note', sorter: {compare: (a, b) => a.note.localeCompare(b.note)}},
-    {title: 'Address', dataIndex: 'address', sorter: {compare: (a, b) => a.address.localeCompare(b.address)}, render: text => <a data-id={text} onClick={this.onClick}>{text}</a>},
+    {title: 'Address', dataIndex: 'address', sorter: {compare: (a, b) => a.address.localeCompare(b.address)}, render: text => <a data-id={text} onClick={this.onClick}>{shortenAddress(String(text), 10)}...</a>},
     {title: 'Token', dataIndex: 'token'},
     {title: 'Status', dataIndex: 'status'}
   ];

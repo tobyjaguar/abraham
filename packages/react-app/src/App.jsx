@@ -35,7 +35,7 @@ const blockExplorer = targetNetwork.blockExplorer;
 /// ============= Helper functions ============= ///
 
 function shortenAddress(address, size) {
-  return "0x"+address.slice(address.length - size);
+  return address.substring(0, size); //slice(address.length - size);
 }
 
 function padLeadingZeros(num, size) {
@@ -101,7 +101,7 @@ function Creation(props) {
       <div className="cr_status" >
         {props.item.address == 0 ? '' : (
           <div onClick={filterByCreator} className="cr_creator">
-            ✍️ {shortenAddress(props.item.address, 4)}
+            ✍️ {shortenAddress(props.item.address, 6)}
           </div>
         )}
         <div className="cr_praiseburn">
@@ -327,7 +327,7 @@ function CreationTool(props) {
         props.onNewReady(taskId)
       }, 2500); 
     } else if (results.data.status == 'failed') {
-      message.error('Creation "'+textInput+'" failed :(');
+      message.error('Creation "'+textInput+'" failed: '+results.data.output);
     } else if (results.data.status == 'queued') {
       setTimeout(function() {
         runStatusChecker(taskId, textInput);
@@ -345,7 +345,7 @@ function CreationTool(props) {
     showModalI();
   };
 
-  const onSubmit = useCallback(async (values, address, tokens) => {
+  const onSubmit = useCallback(async (values, address, tokens, isSigner) => {
     setConfirmLoading(true);
     let textInput = values.textInput;
     if (address) {
@@ -353,10 +353,9 @@ function CreationTool(props) {
     } else {
       var token = values.token;
     }
-    console.log('the server pass', serverPassword)
     const results = await axios.post(serverUrl+'request_creation', {
       password: serverPassword,
-      address: props.isSigner ? address : 0,
+      address: isSigner ? address : 0,
       text_input: textInput,
       token: token
     })
@@ -462,7 +461,7 @@ function CreationTool(props) {
             </Button>
           ]}
         >
-          <Form form={form} onFinish={(values) => onSubmit(values, address, tokens)} requiredMark={'optional'}> 
+          <Form form={form} onFinish={(values) => onSubmit(values, address, tokens, props.isSigner)} requiredMark={'optional'}> 
             <Form.Item name="textInput" label="Text Input" 
             rules={[{required: true}]} >
               <Input />
@@ -497,7 +496,8 @@ function App(props) {
   const [injectedProvider, setInjectedProvider] = useState();
   const userProvider = useUserProvider(injectedProvider, localProvider);
   const address = useUserAddress(userProvider);
-  
+  const price = useExchangePrice(targetNetwork, mainnetProvider);
+
   const [newReady, setNewReady] = useState(null)
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('newest')
@@ -529,7 +529,7 @@ function App(props) {
               localProvider={localProvider}
               userProvider={userProvider}
               mainnetProvider={mainnetProvider}
-              price={999}  // should be price
+              price={price}  // should be price
               web3Modal={web3Modal}
               loadWeb3Modal={loadWeb3Modal}
               logoutOfWeb3Modal={logoutOfWeb3Modal}
