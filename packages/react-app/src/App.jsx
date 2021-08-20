@@ -634,7 +634,7 @@ function Home() {
             
       <div id="abe">
         <video playsinline autoplay muted loop >
-          <source src="images/abraham2.mp4" type="video/mp4" />
+          <source src="images/abraham.mp4" type="video/mp4" />
         </video>
       </div>
 
@@ -656,7 +656,6 @@ function Home() {
         </ul>
       </div>
 
-      <p>&nbsp;</p>
 
     </div>
 
