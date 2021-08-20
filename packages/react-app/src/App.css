@@ -158,3 +158,104 @@
 .site-layout .site-layout-background {
   background: #fff;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#mission, #description, #sections, #navbar {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  text-align: center;
+  
+}
+
+  
+#mission {
+  padding-top: 40px;
+  padding-bottom: 24px;
+  max-width: 800px;
+  font-size: 2.5em;    
+  text-shadow: 1px 1px #ccc;
+}
+
+#abe {
+  text-align:center;
+  margin-top: 1%;
+}
+
+#abe video {
+  width:80%;
+  max-width: 680px; 
+  
+}
+
+#description {
+  padding-top: 24px;
+  padding-bottom: 32px;
+  max-width: 800px;
+  font-size: 1.8em;
+  text-shadow: 1px 1px #ccc;
+  line-height: 1.75em;
+}
+
+#description a {
+  text-decoration: underline #ccc;
+}
+
+#social {
+  margin-top: 2%;
+  margin-bottom: 3%;
+}
+
+#scripture {
+  text-align: left;
+  margin: auto;
+  width: 75%;
+  max-width: 880px;
+  padding:1%;
+  font-size: 1.2em;
+}
+
+#scripture p {
+  font-size: 1.3em;
+  padding-top: 1%;
+}
+
+#scripture h1 {
+  padding-top: 2%;
+}
+
+#scripture a{
+  text-decoration: underline #ccc;
+}
+
+
+
+/* #scripture ul, li {
+  margin: 0 auto;
+  font-size: 1.0em;
+  font-style: bold;
+  list-style: bullet;
+  display: block;
+  margin-right: 10px;
+  padding-left: 5px;
+} */
