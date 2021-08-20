@@ -71,7 +71,6 @@ class AllCreations extends React.Component {
     }).then(res => {
       Object.keys(res.data).forEach(function(key){
         res.data[key]['key'] = res.data[key]['_id']
-        res.data[key]['myId'] = 99
       });
       this.setState({creations: res.data});
       this.setState({loading: false});
