@@ -99,7 +99,7 @@ function Creation(props) {
         <Image alt={props.item.text_input} src={imgPath}/>
       </div>
       <div className="cr_status" >
-        {props.item.address == 0 ? '' : (
+        {!props.item.address ? '' : (
           <div onClick={filterByCreator} className="cr_creator">
             ✍️ {shortenAddress(props.item.address, 6)}
           </div>
