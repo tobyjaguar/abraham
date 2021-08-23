@@ -389,7 +389,7 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
       res.status(200).send({'result': success?'success':'fail', 'newTokens': newTokens});       
     })
 
-    var server = app.listen(49832, function () {
+    var server = app.listen(process.env.BACKEND_PORT, function () {
       console.log("HTTP Listening on port:", server.address().port);
     });
          
