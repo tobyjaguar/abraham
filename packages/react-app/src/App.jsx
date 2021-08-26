@@ -517,7 +517,7 @@ function App(props) {
 
   return (
     <div className="App">
-
+dsflk
       <div id="topbar">
         <div id="navbar">
 
@@ -629,37 +629,19 @@ function ProtectedRoute({ component: Component, ...restOfProps }) {
 function Home() {
   
   return (
+    <>
+
     <div className="App">
-
-            
-      <div id="abe">
-        <video playsinline autoPlay loop muted >
-          <source src="images/abraham.mp4" type="video/mp4" />
-        </video>
-      </div>
-
-      <div id="mission">
-        An artist in the cloud...
-      </div>
-
-      <div id="description">
-        Abraham is an open project to create an <a href="https://medium.com/@genekogan/artist-in-the-cloud-8384824a75c7">autonomous artificial artist</a>. <a href="/scripture">Learn more</a>. <a href="/creations">See Abraham's creations</a>.
-      </div>
-
-
-      <div id="social">
-        <ul>
-          <li><a href="https://discord.gg/4dSYwDT"><img class="grayscale icon_right" src="images/icons/discord.png" /></a></li>
-          <li><a href="https://www.github.com/abraham-ai"><img class="grayscale icon_right" src="images/icons/github.png" /></a></li>
-          <li><a href="https://www.twitter.com/abraham_ai_"><img class="grayscale icon_right" src="images/icons/twitter.png" /></a></li>
-          <li><a href="https://www.instagram.com/abraham_ai_"><img class="grayscale icon_right" src="images/icons/instagram.png" /></a></li>
-        </ul>
-      </div>
-
-
+      You are probably looking for <a href="https://abraham.ai">abraham.ai</a>.
     </div>
-
     
+    <script type="text/javascript">
+      document.addEventListener("DOMContentLoaded", function(event) {
+        window.location.href = 'https://abraham.ai'
+      });
+    </script>
+
+    </>
   );
 }
 
@@ -770,7 +752,7 @@ function Abraham() {
   return (
     <BrowserRouter>
       <Route path="/" exact component={() => <Home />} />
-      <Route path="/creations" exact component={() => <App />} />
+      <ProtectedRoute path="/creations" exact component={App} />
       <Route path="/create" exact component={() => <Redirect to="/creations" />} />
       <Route path="/scripture" exact component={() => <Scripture />} />
       <ProtectedRoute path="/admin" exact component={Admin} />
