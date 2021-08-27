@@ -106,8 +106,8 @@
 #createTool {
   /* background-color: #f0f; */
   display: inline-block;
-  float: right;
-  
+  /* float: right; */
+  float: left;
   padding: 15px;
 }
 

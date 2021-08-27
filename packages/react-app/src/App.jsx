@@ -88,7 +88,7 @@ function Creation(props) {
     setBurns(results.data.burn);
   }  
 
-  const imgPath = "results/"+padLeadingZeros(props.item.idx, 4)+"/image.jpg";
+  const imgPath = "data:image/jpg;base64,"+props.item.image; //"results/"+padLeadingZeros(props.item.idx, 4)+"/image.jpg";
 
   return (
     <div className="creation" >
@@ -242,11 +242,11 @@ function QueryBar(props) {
   return (
     <Space>
       <Radio.Group defaultValue="all" size="large" buttonStyle="solid" onChange={changeFilter}>
-        <div style={{display: filterVisible?'block':'none'}}>
+        <div style={{display: filterVisible?'none':'none'}}>
         <Radio.Button value="all">All creations</Radio.Button>
         <Radio.Button value={props.address}>My creations</Radio.Button>
         </div>
-        <div style={{display: !filterVisible && props.filter != 'all'?'block':'none'}}>
+        <div style={{display: !filterVisible && props.filter != 'all'?'none':'none'}}>
         <Radio.Button value="all2">All creations</Radio.Button>
         </div>
       </Radio.Group>
@@ -456,8 +456,8 @@ function CreationTool(props) {
           confirmLoading={confirmLoading}
           footer={[
             <Button key="submit" type="primary" loading={confirmLoading}
-             onClick={tokens.length==0 && props.isSigner ? requestTokens : form.submit}>
-              {tokens.length == 0 && props.isSigner ? 'How can I get tokens?' : 'Create' }
+             onClick={form.submit}>
+               Create
             </Button>
           ]}
         >
@@ -466,19 +466,6 @@ function CreationTool(props) {
             rules={[{required: true}]} >
               <Input />
             </Form.Item>
-            {!address ? (
-              <>
-              <Form.Item name="token" label="Token" 
-              rules={[{required: true}]} >
-                <Input />
-              </Form.Item>
-              <span style={{cursor: 'pointer'}} onClick={requestTokens}>How can I get tokens?</span>
-              </>
-            ) : (
-              <>
-                You have {tokens.length} tokens remaining for this address.
-              </>
-            )}
           </Form>
         </Modal>
       </Space>
@@ -517,30 +504,13 @@ function App(props) {
 
   return (
     <div className="App">
-dsflk
+
       <div id="topbar">
         <div id="navbar">
 
-          <div id="navbar_account" >
-            <Account
-              connectText={"Connect Ethereum Wallet"}
-              onlyShowButton={!isSigner}
-              address={address}
-              localProvider={localProvider}
-              userProvider={userProvider}
-              mainnetProvider={mainnetProvider}
-              price={price}  // should be price
-              web3Modal={web3Modal}
-              loadWeb3Modal={loadWeb3Modal}
-              logoutOfWeb3Modal={logoutOfWeb3Modal}
-              blockExplorer={blockExplorer}
-            />
-            {/* {faucetHint} */}
-          </div>
-
           <div id="navbar_sections">
             <ul>
-              <li><a href="/"><img src="images/abraham.png" height="80px"></img></a></li>
+              <li><a href="/creations"><img src="images/abraham.png" height="80px"></img></a></li>
               <li><a href="/creations">Creations</a></li>
               <li><a href="/scripture">Scripture</a></li>
             </ul>
@@ -656,7 +626,7 @@ function Scripture () {
 
           <div id="navbar_sections">
             <ul>
-              <li><a href="/"><img src="images/abraham.png" height="80px"></img></a></li>
+              <li><a href="/creations"><img src="images/abraham.png" height="80px"></img></a></li>
               <li><a href="/creations">Creations</a></li>
               <li><a href="/scripture">Scripture</a></li>
             </ul>
