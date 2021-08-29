@@ -1,0 +1,261 @@
+.App {
+  text-align: center;
+}
+
+
+#results {
+  /* margin-top: 10px; */
+  width: 100%;
+  max-width: 2200px;
+  margin-top:20px;
+  padding: 1%;
+}
+.creation {
+  display: inline-block;
+  /* margin: 15px; */
+  /* padding: 5px; */
+  padding: 1%;
+  /* width: 542px; */
+  /* width: 100%; */
+  border: 1px solid #ddd ;
+}
+.cr_img img {
+  width: 100%;
+}
+
+.cr_text{
+  /* padding: 5px; */
+  /* padding-bottom: 10px; */
+  font-size: 1.65em;
+}
+
+.cr_status{
+  padding: 1%;
+  padding-left: 3%;
+  /* padding-bottom: 10px; */
+  padding-right: 3%;
+}
+
+.cr_creator {
+  font-size: 1.4em;
+  float: right;
+}
+.cr_creator:hover {
+  cursor: pointer;
+}
+.cr_praiseburn {
+  font-size: 1.65em;
+  float: left;
+}
+.cr_praise:hover, .cr_burn:hover {
+  cursor: pointer;
+}
+.cr_img img:hover {
+  cursor: pointer;
+}
+
+
+#navbar {
+  /* background-color: #ff0; */
+  width: 100%;
+  height: 80px;
+}
+
+#abraham_logo {
+  float: left;
+  /* background-color: #0f0; */
+}
+
+#navbar_sections {
+  /* background-color: #f0f; */
+  /* margin:0 auto; */
+  float: left;
+}
+
+#navbar_sections ul, li {
+  margin: 0 auto;
+  font-size: 1.44em;
+  font-style: bold;
+  list-style: none;
+  display: inline;
+  margin-right: 64px;
+  padding-left: 5px;
+}
+
+#navbar_account {
+  /* background-color: #f00; */
+  float: right;
+  margin: 15px;
+}
+
+
+#toolbar {
+  /* background-color: #0f0; */
+  width: 100%;
+  height: 5.0em;
+  vertical-align: middle;
+}
+
+#views {
+  /* background-color: #5a9; */
+  display: inline-block;
+  float: left;  
+  padding: 15px;
+}
+
+#createTool {
+  /* background-color: #f0f; */
+  display: inline-block;
+  float: right;
+  
+  padding: 15px;
+}
+
+
+#topbar {
+  /* background-color: #ff0;; */
+}
+
+
+
+
+.progress-circle.ant-progress .ant-progress-text {
+  color: #fff;
+}
+
+
+
+
+
+/* 
+
+
+#mytable {
+  background-color: #f00;
+  width: 50%;
+  margin: auto;
+} */
+
+
+#components-layout-demo-custom-trigger .trigger {
+  padding: 0 24px;
+  font-size: 18px;
+  line-height: 64px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+#components-layout-demo-custom-trigger .trigger:hover {
+  color: #1890ff;
+}
+
+#components-layout-demo-custom-trigger .logo {
+  height: 32px;
+  margin: 16px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.site-layout .site-layout-background {
+  background: #fff;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#mission, #description, #sections, #navbar {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  text-align: center;
+  
+}
+
+  
+#mission {
+  padding-top: 16px;
+  padding-bottom: 12px;
+  max-width: 820px;
+  font-size: 2.5em;    
+  text-shadow: 1px 1px #ccc;
+}
+
+#abe {
+  text-align:center;
+  margin-top: 1%;
+}
+
+#abe video {
+  width:82%;
+  max-width: 720px; 
+  
+}
+
+#description {
+  padding-top: 8px;
+  padding-bottom: 12px;
+  max-width: 800px;
+  font-size: 1.8em;
+  text-shadow: 1px 1px #ccc;
+  line-height: 1.75em;
+}
+
+#description a {
+  text-decoration: underline #ccc;
+}
+
+#social {
+  margin-top: 1%;
+  margin-bottom: 1%;
+}
+
+#scripture {
+  text-align: left;
+  margin: auto;
+  width: 75%;
+  max-width: 880px;
+  padding:1%;
+  font-size: 1.2em;
+}
+
+#scripture p {
+  font-size: 1.3em;
+  padding-top: 1%;
+}
+
+#scripture h1 {
+  padding-top: 2%;
+}
+
+#scripture a{
+  text-decoration: underline #ccc;
+}
+
+
+
+/* #scripture ul, li {
+  margin: 0 auto;
+  font-size: 1.0em;
+  font-style: bold;
+  list-style: bullet;
+  display: block;
+  margin-right: 10px;
+  padding-left: 5px;
+} */
