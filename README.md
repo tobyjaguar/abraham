@@ -12,7 +12,6 @@ It is a modified version of the [sign-in-with-web3 branch of scaffold-eth 🏗](
 
 Installation:
 
-    pip install -r requirements.txt
     yarn install
 
 Create a file called `.env` in the root folder which specifies the url of the generator client (`CLIENT_URL`) and a file to log to (`LOG_FILE`), e.g.
