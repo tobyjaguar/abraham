@@ -139,9 +139,8 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
 
       results = await getTokens({token: token}, password).then(async (results) => {
 
-        //if (results.length > 0) {  
-        if (true) {  
-
+        if (results.length > 0) {  
+        
           config = {
             'username': 'abraham',
             'model_name': 'imagenet', 
