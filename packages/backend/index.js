@@ -1,3 +1,4 @@
+// "use strict";
 const path = require('path')
 var ethers = require("ethers");
 var express = require("express");
@@ -13,8 +14,9 @@ const { isError } = require('util');
 var ObjectId = require('mongodb').ObjectId;
 var md5 = require('blueimp-md5')
 require('dotenv').config()
+const axios = require('axios');
 
-
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 app.use(cors())
 app.use(bodyParser.json());
@@ -49,36 +51,6 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
     
     const creations = client.db(process.env.DB_NAME).collection('creations')
     const tokens = client.db(process.env.DB_NAME).collection('tokens')
-
-    function checkTaskStatus(task_id, password) {
-
-      return new Promise((resolve, reject) => {
-
-        let authorized = authenticate(password);
-        if (!authorized) {
-          console.log('Error: not authorized');
-          resolve(false);
-        }
-  
-        let options = {
-          mode: 'text',
-          pythonPath: 'python3',
-          pythonOptions: ['-u'], 
-          scriptPath: '.',
-          args: ['fetch', task_id]
-        };
-
-        PythonShell.run('main.py', options, function (err, results) {
-          if (err) {
-            results = {'status': 'failed', 'output': 'there was a fetching error'}  
-            resolve(results)
-          } else {
-            results = JSON.parse(results);
-            resolve(results);
-          }
-        })
-      })
-    }
     
     async function update_stats(req, res, type, password) {
 
@@ -113,16 +85,25 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
 
     async function runStatusChecker(task_id, address, token, password) {
 
-      let results = await checkTaskStatus(task_id, password)
-      if (results['status'] == 'complete') {
-        text_input = results['output']['config']['text_input']
-        index = results['index']
+      let authorized = authenticate(password);
+      if (!authorized) {
+        console.log('Error: not authorized');
+        resolve(false);
+      }
+      
+      const results = await axios.post(process.env.CLIENT_URL+'/fetch', {
+        token: task_id
+      });
+
+      if (results.data.status == 'complete') {
+        base64img = results.data.output.creation.data;
+        text_input = results.data.output.config.text_input
         creations.insertOne({
           'date': new Date(),
           'address': address,
           'text_input': text_input,
           'task_id': task_id,
-          'idx': index,
+          'image': base64img,
           'praise': 0,
           'burn': 0
         })
@@ -131,10 +112,12 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
           //updateTokenStatus({token: token}, null, password);
         })
         .catch(error => console.error(error))
-      } 
-      else if (results['status'] == 'failed') {
+      }
+
+      else if (results.data.status == 'failed') {
         updateTokenStatus({token: token}, null, password);
       }
+
       else {
         setTimeout(function() {
           runStatusChecker(task_id, address, token, password);
@@ -154,38 +137,39 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
         return;
       }
 
-      results = await getTokens({token: token}, password).then(results => {
+      results = await getTokens({token: token}, password).then(async (results) => {
 
-        if (results.length > 0) {  
+        //if (results.length > 0) {  
+        if (true) {  
 
-          let options = {
-            mode: 'text',
-            pythonPath: 'python3',
-            pythonOptions: ['-u'], 
-            scriptPath: '.',
-            args: ['create', text_input]
-          };
+          config = {
+            'username': 'abraham',
+            'model_name': 'imagenet', 
+            'clip_model': 'ViT-B/32',
+            'text_input': text_input,
+            'width': 800,
+            'height': 600,
+            'num_octaves': 3,
+            'octave_scale': 2.0,
+            'num_iterations': [100, 200, 300]
+          }
 
-          PythonShell.run('main.py', options, function (err, results) {
+          const results = await axios.post(process.env.CLIENT_URL+'/run', config);
+          task_id = results.data.token
 
-            // something wrong in python script
-            if (err) {
-              results = {'status': 'failed', 'output': err}  
-              res.status(200).send(results);
-              throw err;
-            } 
+          if (task_id == null) {
+            response = {'status': 'failed', 'output': 'internal error on request_creation'}  
+            res.status(200).send(response);
+          }
 
-            // succeeded in running
-            else {         
-              let task_id = results.pop()
-              updateTokenStatus({token: token}, task_id, password);
-              results = {'status': 'running', 'task_id': task_id}
-              setTimeout(function() {
-                runStatusChecker(task_id, address, token, password);
-              }, 5000);
-              res.status(200).send(results); 
-            }
-          });
+          else {
+            response = {'status': 'running', 'task_id': task_id}
+            setTimeout(function() {
+              runStatusChecker(task_id, address, token, password);
+            }, 5000);
+            res.status(200).send(response); 
+          }
+
         }
 
         // token not recognized
@@ -210,8 +194,17 @@ MongoClient.connect(process.env.MONGO_URL, { useNewUrlParser: true })
         return;
       }
       task_id = req.body['task_id']
-      let results = await checkTaskStatus(task_id, req.body['password'])
-      res.status(200).send(results); 
+
+      let results = await axios.post(process.env.CLIENT_URL+'/fetch', {
+        token: task_id
+      });
+
+      if (results.data.status == 'complete') {
+        results.data.output.creation = null;
+        // todo: send the new image back from here
+      }
+
+      res.status(200).send(results.data); 
     });
 
     app.post('/backend/get_creations', async (req, res) => {
